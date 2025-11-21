@@ -6,7 +6,6 @@ dist
 .vite
 
 # local env files
-.env
 .env.*
 
 # testing / reports
