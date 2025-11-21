@@ -51,8 +51,10 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
   const [totalBalance, setTotalBalance] = useState('');
 
   const [isFirstHomeBuyer, setIsFirstHomeBuyer] = useState(true);
+  const [isCitizen, setIsCitizen] = useState<boolean | null>(null);
   const [homePrice, setHomePrice] = useState<number | null>(null);
   const [autoPrice, setAutoPrice] = useState(false);
+  const cities: string[] = [];
   const [location, setLocation] = useState('');
   const [bedrooms, setBedrooms] = useState(3);
   const [bathrooms, setBathrooms] = useState(2);
@@ -61,6 +63,10 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [autoEstimatePrice, setAutoEstimatePrice] = useState<number | null>(null);
+  const [estimatesCache, setEstimatesCache] = useState<
+    Array<{ state: string; city: string; bedrooms: number; bathrooms: number; hasGarage: boolean; price: number }>
+  >([]);
 
   const formatNumberInput = (value: number | null) =>
     value !== null && !Number.isNaN(value) ? value.toLocaleString() : '';
@@ -69,6 +75,58 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
     const cleaned = value.replace(/[^0-9]/g, '');
     if (!cleaned) return null;
     return Math.round(Number(cleaned));
+  };
+
+  const knownCities = ['SYDNEY', 'MELBOURNE', 'BRISBANE', 'ADELAIDE', 'PERTH', 'HOBART', 'DARWIN', 'CANBERRA'];
+
+  const normalizeCity = (value: string) => {
+    const upper = value.trim().toUpperCase();
+    if (!upper) return '';
+    const firstSegment = upper.split(',')[0].trim();
+    const match = knownCities.find((c) => firstSegment.includes(c) || c.includes(firstSegment));
+    return match || firstSegment;
+  };
+
+  const loadEstimates = async () => {
+    if (estimatesCache.length > 0) return estimatesCache;
+    try {
+      const res = await fetch('/property_estimates_au.csv');
+      if (!res.ok) return [];
+      const text = await res.text();
+      const rows = text.trim().split('\n').slice(1).map((line) => line.split(','));
+      const parsed = rows.map((r) => ({
+        state: r[0].toUpperCase(),
+        city: r[1].trim().toUpperCase(),
+        bedrooms: Number(r[2]),
+        bathrooms: Number(r[3]),
+        hasGarage: r[4] === '1' || r[4].toLowerCase() === 'true',
+        price: Number(r[5]),
+      }));
+      setEstimatesCache(parsed);
+      return parsed;
+    } catch {
+      return [];
+    }
+  };
+
+  const estimateFromSpecs = async () => {
+    const estimates = await loadEstimates();
+    const cityKey = normalizeCity(location);
+    const exact = estimates.find(
+      (r) =>
+        r.city === cityKey &&
+        r.bedrooms === bedrooms &&
+        r.bathrooms === bathrooms &&
+        r.hasGarage === garage
+    );
+    if (exact) return exact.price;
+    const close = estimates.find(
+      (r) =>
+        r.city === cityKey &&
+        r.bedrooms === bedrooms &&
+        r.bathrooms === bathrooms
+    );
+    return close?.price ?? null;
   };
 
   const handleUseDemoData = async () => {
@@ -191,15 +249,16 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
   }, [jobTitle, employmentType]);
 
   const handleEstimatePrice = () => {
-    const base = 300000;
-    const estimate =
-      base +
-      bedrooms * 50000 +
-      bathrooms * 30000 +
-      (garage ? 20000 : 0) +
-      (location ? 15000 : 0);
-    setHomePrice(estimate);
     setAutoPrice(true);
+    estimateFromSpecs().then((price) => {
+      if (price !== null && !Number.isNaN(price)) {
+        const rounded = Math.round(price);
+        setAutoEstimatePrice(rounded);
+        setHomePrice(rounded);
+      } else {
+        setAutoEstimatePrice(null);
+      }
+    });
   };
 
   const validateCurrentStep = () => {
@@ -247,7 +306,7 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
         }
         return true;
       case 3:
-        if (!homePrice) {
+        if (!homePrice && !(autoPrice && autoEstimatePrice !== null)) {
           setError('Set a target home price or estimate it automatically.');
           return false;
         }
@@ -562,7 +621,9 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
             </div>
             <div>
               <p className="text-xs text-text-secondary">Avg Monthly Savings</p>
-              <p className="font-semibold text-green-600">
+              <p
+                className={`font-semibold ${analysisResult.monthlyAverageSavings >= 0 ? 'text-green-600' : 'text-red-500'}`}
+              >
                 ${analysisResult.monthlyAverageSavings.toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </p>
             </div>
@@ -575,110 +636,149 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
   const renderHomeStep = () => (
     <Card>
       <h2 className="text-lg font-semibold text-text-primary mb-3">Dream Home</h2>
-      <div className="flex items-center gap-2 text-sm font-medium text-text-secondary">
-        <span>First home buyer?</span>
-        <Button
-          variant={isFirstHomeBuyer ? 'primary' : 'secondary'}
-          onClick={() => setIsFirstHomeBuyer(true)}
-        >
-          Yes
-        </Button>
-        <Button
-          variant={!isFirstHomeBuyer ? 'primary' : 'secondary'}
-          onClick={() => setIsFirstHomeBuyer(false)}
-        >
-          No
-        </Button>
-      </div>
-      <div className="mt-4">
-        <input
-          type="number"
-          className={inputClasses}
-          value={homePrice ?? ''}
-          onChange={(e) => {
-            const val = e.target.value;
-            setHomePrice(val === '' ? null : Number(val));
-            setAutoPrice(false);
-          }}
-          disabled={autoPrice}
-          aria-label="Target Price"
-          placeholder="Target Price"
-        />
-        <div className="mt-2 flex items-center gap-2 text-xs text-text-secondary flex-wrap">
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={autoPrice}
-              onChange={(e) => setAutoPrice(e.target.checked)}
-              className="rounded border-gray-300 text-primary focus:ring-primary"
-            />
-            <span>Estimate price automatically from specs</span>
-          </label>
-          <Button variant="secondary" onClick={handleEstimatePrice} className="text-xs">
-            Run mock AI estimate
-          </Button>
-        </div>
-      </div>
-        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <input
-              type="text"
-              className={inputClasses}
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="Location"
-              aria-label="Location"
-              disabled={!autoPrice}
-            />
-          </div>
-          <div>
-            <div className="mt-1 flex gap-2">
-              <Button
-                variant={garage ? 'primary' : 'secondary'}
-              onClick={() => setGarage(true)}
-              disabled={!autoPrice}
+      <div className="space-y-4">
+        <div>
+          <div className="text-sm font-medium text-text-secondary mb-2">Are you an Australian citizen?</div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={isCitizen === true ? 'primary' : 'secondary'}
+              onClick={() => setIsCitizen(true)}
               className="flex-1"
             >
               Yes
             </Button>
             <Button
-              variant={!garage ? 'primary' : 'secondary'}
-              onClick={() => setGarage(false)}
-              disabled={!autoPrice}
+              variant={isCitizen === false ? 'primary' : 'secondary'}
+              onClick={() => setIsCitizen(false)}
               className="flex-1"
             >
               No
             </Button>
           </div>
         </div>
+
+        {isCitizen === true && (
+          <div>
+            <div className="text-sm font-medium text-text-secondary mb-2">First home buyer?</div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={isFirstHomeBuyer ? 'primary' : 'secondary'}
+                onClick={() => setIsFirstHomeBuyer(true)}
+                className="flex-1"
+              >
+                Yes
+              </Button>
+              <Button
+                variant={!isFirstHomeBuyer ? 'primary' : 'secondary'}
+                onClick={() => setIsFirstHomeBuyer(false)}
+                className="flex-1"
+              >
+                No
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
-        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
+      <div className="mt-6 border-t border-gray-200 pt-4 space-y-4">
+        <input
+          type="number"
+          className={inputClasses}
+          value={autoPrice && autoEstimatePrice !== null ? autoEstimatePrice : homePrice ?? ''}
+          onChange={(e) => {
+            const val = e.target.value;
+            setHomePrice(val === '' ? null : Number(val));
+            setAutoPrice(false);
+            setAutoEstimatePrice(null);
+          }}
+          disabled={autoPrice}
+          aria-label="Target Price"
+          placeholder="Target Price"
+        />
+        {autoEstimatePrice !== null && autoPrice && (
+          <p className="mt-1 text-xs font-semibold text-primary">
+            Auto-estimated price: ${autoEstimatePrice.toLocaleString()}
+          </p>
+        )}
+        <div className="flex items-center gap-2 text-xs text-text-secondary flex-wrap">
+          <label className="flex items-center gap-2">
             <input
-              type="range"
-              min={1}
-              max={5}
-            step={1}
-            value={bedrooms}
-            disabled={!autoPrice}
-            onChange={(e) => setBedrooms(Number(e.target.value))}
-            className="mt-2 w-full"
-          />
-          <p className="text-xs text-text-secondary mt-1">{bedrooms} bedrooms</p>
+              type="checkbox"
+              checked={autoPrice}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setAutoPrice(checked);
+                if (checked) {
+                  handleEstimatePrice();
+                } else {
+                  setAutoEstimatePrice(null);
+                }
+              }}
+              className="rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <span>Estimate price automatically from specs</span>
+          </label>
         </div>
-          <div>
-            <input
-              type="range"
-              min={1}
-            max={4}
-            step={1}
-            value={bathrooms}
-            disabled={!autoPrice}
-            onChange={(e) => setBathrooms(Number(e.target.value))}
-            className="mt-2 w-full"
-          />
-          <p className="text-xs text-text-secondary mt-1">{bathrooms} bathrooms</p>
-        </div>
+        {autoPrice && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <input
+                  type="text"
+                  className={inputClasses}
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Location"
+                  aria-label="Location"
+                />
+              </div>
+              <div>
+                <div className="text-sm font-medium text-text-secondary mb-1">Does it have a garage?</div>
+                <div className="mt-1 flex gap-2">
+                  <Button
+                    variant={garage ? 'primary' : 'secondary'}
+                    onClick={() => setGarage(true)}
+                    className="flex-1"
+                  >
+                    Yes
+                  </Button>
+                  <Button
+                    variant={!garage ? 'primary' : 'secondary'}
+                    onClick={() => setGarage(false)}
+                    className="flex-1"
+                  >
+                    No
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <input
+                  type="range"
+                  min={1}
+                  max={4}
+                  step={1}
+                  value={bedrooms}
+                  onChange={(e) => setBedrooms(Number(e.target.value))}
+                  className="mt-2 w-full"
+                />
+                <p className="text-xs text-text-secondary mt-1">{bedrooms} bedrooms</p>
+              </div>
+              <div>
+                <input
+                  type="range"
+                  min={1}
+                  max={4}
+                  step={1}
+                  value={bathrooms}
+                  onChange={(e) => setBathrooms(Number(e.target.value))}
+                  className="mt-2 w-full"
+                />
+                <p className="text-xs text-text-secondary mt-1">{bathrooms} bathrooms</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Card>
   );
@@ -752,7 +852,7 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
             )}
             {isLastStep ? (
               <Button className="flex-1" onClick={handleSubmit} isLoading={isLoading}>
-                Create Account
+                Create
               </Button>
             ) : (
               <Button className="flex-1" onClick={handleNextStep}>
