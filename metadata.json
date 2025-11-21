@@ -1,0 +1,7 @@
+{
+  "name": "HomePath",
+  "description": "A financial AI assistant to help first-time home buyers track their financial readiness, forecast home affordability timelines, and get actionable personalized recommendations.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
