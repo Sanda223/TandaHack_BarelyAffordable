@@ -36,7 +36,7 @@ const Layout: React.FC<LayoutProps> = ({ activePage, setActivePage, children, sh
         </div>
       )}
       {/* Main Content */}
-      <main className={showNav ? (!hideTopBar ? 'pb-24 pt-20' : 'pb-24 pt-2') : ''}>
+      <main className={showNav ? (!hideTopBar ? 'pb-24 pt-10' : 'pb-24 pt-2') : ''}>
         <div className="p-4 md:p-6">
           {children}
         </div>
