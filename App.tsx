@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Page, UserProfile, BankStatementAnalysis, HomeCriteria } from './types';
+import { Page, UserProfile, BankStatementAnalysis, HomeCriteria, PublicUser } from './types';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
@@ -10,35 +10,53 @@ import Insights from './pages/Insights';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
 import FinancialReport from './pages/FinancialReport';
+import { getCurrentUser, persistAuthenticatedState, signOutUser } from './services/authService';
+
+const defaultProfile: UserProfile = {
+  jobTitle: 'Software Engineer',
+  jobType: 'Salary',
+  annualIncome: 90000,
+  monthlyIncome: 7500,
+  hobbies: ['Coding', 'Hiking', 'Photography'],
+  skills: ['React', 'TypeScript', 'Node.js'],
+};
+
+const defaultCriteria: HomeCriteria = {
+  bedrooms: 3,
+  bathrooms: 2,
+  location: 'Austin, TX',
+  garage: true,
+  propertyType: 'House',
+  isFirstHomeBuyer: true,
+  estimatedPrice: 550000,
+  autoEstimate: false,
+};
+
+const createInitialProfile = (): UserProfile => ({
+  ...defaultProfile,
+  hobbies: [...defaultProfile.hobbies],
+  skills: [...defaultProfile.skills],
+});
+
+const createInitialCriteria = (): HomeCriteria => ({
+  ...defaultCriteria,
+});
 
 const App: React.FC = () => {
   const [activePage, setActivePage] = useState<Page>(Page.SignIn);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const [profile, setProfile] = useState<UserProfile>({
-    jobTitle: 'Software Engineer',
-    jobType: 'Salary',
-    annualIncome: 90000,
-    monthlyIncome: 7500,
-    hobbies: ['Coding', 'Hiking', 'Photography'],
-    skills: ['React', 'TypeScript', 'Node.js'],
-  });
+  const [profile, setProfile] = useState<UserProfile>(() => createInitialProfile());
 
   const [bankAnalysis, setBankAnalysis] = useState<BankStatementAnalysis | null>(null);
 
-  const [criteria, setCriteria] = useState<HomeCriteria>({
-    bedrooms: 3,
-    bathrooms: 2,
-    location: 'Austin, TX',
-    garage: true,
-    propertyType: 'House',
-    isFirstHomeBuyer: true,
-    estimatedPrice: 550000,
-    autoEstimate: false,
-  });
+  const [criteria, setCriteria] = useState<HomeCriteria>(() => createInitialCriteria());
 
   const [interestRate, setInterestRate] = useState(6.5);
   const [loanTerm, setLoanTerm] = useState(30);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [fullName, setFullName] = useState('');
+  const [totalBalance, setTotalBalance] = useState<number | null>(null);
 
   const wrapContent = (content: React.ReactNode) => (
     <div className="min-h-screen flex justify-center">
@@ -63,9 +81,46 @@ const App: React.FC = () => {
     }
   }, [criteria.autoEstimate, criteria.bedrooms, criteria.bathrooms, criteria.garage, criteria.location]);
 
-  const handleAuthSuccess = () => {
+  useEffect(() => {
+    const savedUser = getCurrentUser();
+    if (savedUser) {
+      setCurrentUserId(savedUser.id);
+      setProfile(savedUser.profile);
+      setCriteria(savedUser.criteria);
+      setFullName(savedUser.fullName);
+      setBankAnalysis(savedUser.bankAnalysis ?? null);
+      setTotalBalance(savedUser.totalBalance ?? null);
+      setIsAuthenticated(true);
+      setActivePage(Page.Dashboard);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || !currentUserId) return;
+    persistAuthenticatedState(currentUserId, { profile, criteria, bankAnalysis, totalBalance });
+  }, [profile, criteria, bankAnalysis, totalBalance, isAuthenticated, currentUserId]);
+
+  const handleAuthSuccess = (user: PublicUser) => {
+    setCurrentUserId(user.id);
+    setProfile(user.profile);
+    setCriteria(user.criteria);
+    setFullName(user.fullName);
+    setBankAnalysis(user.bankAnalysis ?? null);
+    setTotalBalance(user.totalBalance ?? null);
     setIsAuthenticated(true);
     setActivePage(Page.Dashboard);
+  };
+
+  const handleSignOut = () => {
+    signOutUser();
+    setCurrentUserId(null);
+    setIsAuthenticated(false);
+    setActivePage(Page.SignIn);
+    setFullName('');
+    setBankAnalysis(null);
+    setTotalBalance(null);
+    setProfile(createInitialProfile());
+    setCriteria(createInitialCriteria());
   };
 
   const renderPage = () => {
@@ -96,6 +151,9 @@ const App: React.FC = () => {
             setActivePage={setActivePage} 
             interestRate={interestRate} 
             loanTerm={loanTerm} 
+            fullName={fullName}
+            totalBalance={totalBalance}
+            bankAnalysis={bankAnalysis}
           />
         );
       case Page.Profile:
@@ -108,6 +166,8 @@ const App: React.FC = () => {
             criteria={criteria}
             setCriteria={setCriteria}
             setActivePage={setActivePage}
+            fullName={fullName}
+            onSignOut={handleSignOut}
           />
         );
       case Page.Learning:
@@ -134,6 +194,7 @@ const App: React.FC = () => {
             loanTerm={loanTerm}
             setLoanTerm={setLoanTerm}
             setActivePage={setActivePage}
+            onSignOut={handleSignOut}
           />
         );
       default:
@@ -144,6 +205,9 @@ const App: React.FC = () => {
             setActivePage={setActivePage} 
             interestRate={interestRate} 
             loanTerm={loanTerm}
+            fullName={fullName}
+            totalBalance={totalBalance}
+            bankAnalysis={bankAnalysis}
           />
         );
     }

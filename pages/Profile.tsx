@@ -14,6 +14,8 @@ interface ProfileProps {
   criteria: HomeCriteria;
   setCriteria: React.Dispatch<React.SetStateAction<HomeCriteria>>;
   setActivePage: (page: Page) => void;
+  onSignOut?: () => void;
+  fullName?: string;
 }
 
 const inputClasses = "w-full p-3 bg-white border rounded-xl border-gray-300 shadow-sm text-sm focus:border-primary focus:ring-1 focus:ring-primary";
@@ -37,7 +39,7 @@ const Section: React.FC<{title: string; icon: React.ComponentProps<typeof Icon>[
     </Card>
 );
 
-const Profile: React.FC<ProfileProps> = ({ profile, setProfile, bankAnalysis, setBankAnalysis, criteria, setCriteria, setActivePage }) => {
+const Profile: React.FC<ProfileProps> = ({ profile, setProfile, bankAnalysis, setBankAnalysis, criteria, setCriteria, setActivePage, onSignOut, fullName }) => {
   const [newHobby, setNewHobby] = useState('');
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
 
@@ -94,11 +96,25 @@ const Profile: React.FC<ProfileProps> = ({ profile, setProfile, bankAnalysis, se
           monthlyAverageSpend: 2850.75,
           monthlyAverageSavings: 1149.25,
           recurringExpenses: [
-            { name: 'Netflix', amount: 15.99 },
-            { name: 'Gym', amount: 40.00 },
-            { name: 'Utilities', amount: 120.00 },
-            { name: 'Rent', amount: 1500.00 },
+            { name: 'Netflix', averageAmount: 15.99, category: 'Subscriptions', macroCategory: 'Lifestyle', transactionCount: 3, monthCount: 3, estimatedMonthlyCost: 15.99 },
+            { name: 'Gym', averageAmount: 40.0, category: 'Utilities', macroCategory: 'Essential', transactionCount: 3, monthCount: 3, estimatedMonthlyCost: 40.0 },
+            { name: 'Utilities', averageAmount: 120.0, category: 'Utilities', macroCategory: 'Essential', transactionCount: 3, monthCount: 3, estimatedMonthlyCost: 120.0 },
+            { name: 'Rent', averageAmount: 1500.0, category: 'Rent', macroCategory: 'Essential', transactionCount: 3, monthCount: 3, estimatedMonthlyCost: 1500.0 },
           ],
+          monthlyBreakdown: [],
+          incomeSources: [],
+          totalTransactions: 0,
+          totalInflowTransactions: 0,
+          totalOutflowTransactions: 0,
+          totalAverageMonthlyIncome: 0,
+          expenseByMacro: [],
+          expenseByCategory: [],
+          recurringEssential: [],
+          recurringLifestyle: [],
+          leakageHotspots: [],
+          monthsCovered: [],
+          startDate: '',
+          endDate: '',
         });
       }, 1500);
     }
@@ -114,13 +130,26 @@ const Profile: React.FC<ProfileProps> = ({ profile, setProfile, bankAnalysis, se
 
   const depositGoal = criteria.estimatedPrice * (criteria.isFirstHomeBuyer ? 0.05 : 0.20);
 
-  const spendChartData = bankAnalysis ? [
-    ...bankAnalysis.recurringExpenses,
-    {
-      name: 'Other',
-      amount: bankAnalysis.monthlyAverageSpend - bankAnalysis.recurringExpenses.reduce((sum, item) => sum + item.amount, 0),
-    },
-  ].sort((a, b) => a.amount - b.amount) : [];
+  const recurringExpenses = bankAnalysis?.recurringExpenses ?? [];
+  const spendChartData = bankAnalysis
+    ? [
+        ...recurringExpenses.map((expense) => ({
+          name: expense.name,
+          amount: expense.estimatedMonthlyCost ?? expense.averageAmount ?? (expense as any).amount ?? 0,
+        })),
+        {
+          name: 'Other',
+          amount: Math.max(bankAnalysis.monthlyAverageSpend - recurringExpenses.reduce((sum, item) => sum + (item.estimatedMonthlyCost ?? item.averageAmount ?? (item as any).amount ?? 0), 0), 0),
+        },
+      ].sort((a, b) => a.amount - b.amount)
+    : [];
+
+  const firstName = fullName?.trim().split(' ')[0] || '';
+  const possessiveName = firstName
+    ? firstName.endsWith('s') || firstName.endsWith('S')
+      ? `${firstName}'`
+      : `${firstName}'s`
+    : '';
 
 
   return (
@@ -138,11 +167,22 @@ const Profile: React.FC<ProfileProps> = ({ profile, setProfile, bankAnalysis, se
         </div>
       </div>
       <header>
-        <h1 className="text-3xl font-bold text-text-primary">Your Profile</h1>
+        <h1 className="text-3xl font-bold text-text-primary">
+          {possessiveName ? `${possessiveName} Profile` : 'Your Profile'}
+        </h1>
         <p className="text-text-secondary mt-1 flex items-center">
           Let's personalize your path to homeownership.
           <Icon name="home" className="w-5 h-5 ml-2" />
         </p>
+        {onSignOut && (
+          <button
+            onClick={onSignOut}
+            className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-accent"
+          >
+            <Icon name="arrow-right" className="w-4 h-4 rotate-180" />
+            Sign out
+          </button>
+        )}
       </header>
 
       <Section title="About You" icon="user">

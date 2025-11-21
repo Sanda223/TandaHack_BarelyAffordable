@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import logo from '../assets/logo.png';
+import { PublicUser } from '../types';
+import { authenticateUser } from '../services/authService';
 
 interface SignInProps {
-  onSuccess: () => void;
+  onSuccess: (user: PublicUser) => void;
   onSwitch: () => void;
 }
 
@@ -14,11 +16,11 @@ const inputClasses =
 const SignIn: React.FC<SignInProps> = ({ onSuccess, onSwitch }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const rememberMe = true;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
       setError('Please fill in your email and password.');
@@ -27,10 +29,14 @@ const SignIn: React.FC<SignInProps> = ({ onSuccess, onSwitch }) => {
 
     setIsLoading(true);
     setError('');
-    setTimeout(() => {
+    try {
+      const user = await authenticateUser(email, password, rememberMe);
+      onSuccess(user);
+    } catch (authError) {
+      setError(authError instanceof Error ? authError.message : 'Unable to sign in right now.');
+    } finally {
       setIsLoading(false);
-      onSuccess();
-    }, 900);
+    }
   };
 
   return (

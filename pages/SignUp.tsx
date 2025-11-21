@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Icon from '../components/Icon';
+import logo from '../assets/logo.png';
+import { BankStatementAnalysis, HomeCriteria, PublicUser, UserProfile } from '../types';
+import { registerUser } from '../services/authService';
+import { analyzeBankStatements } from '../services/bankAnalyzer';
 
 interface SignUpProps {
-  onSuccess: () => void;
+  onSuccess: (user: PublicUser) => void;
   onSwitch: () => void;
 }
 
@@ -13,6 +17,13 @@ const inputClasses =
 
 const employmentTypes = ['Full-time', 'Part-time', 'Casual', 'Contract'];
 const steps = ['Account', 'Job & Skills', 'Bank Statement', 'Dream Home'];
+
+const employmentToJobType: Record<string, UserProfile['jobType']> = {
+  'Full-time': 'Salary',
+  'Part-time': 'Hourly',
+  Contract: 'Contract',
+  Casual: 'Casual',
+};
 
 const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -32,7 +43,11 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
   const [hobbyInput, setHobbyInput] = useState('');
   const [hobbies, setHobbies] = useState<string[]>([]);
 
-  const [bankSummary, setBankSummary] = useState<{ savings: number; spend: number } | null>(null);
+  const [bankStatements, setBankStatements] = useState<Array<{ fileName: string } | null>>([null, null, null]);
+  const [statementFiles, setStatementFiles] = useState<(File | null)[]>([null, null, null]);
+  const [analysisResult, setAnalysisResult] = useState<BankStatementAnalysis | null>(null);
+  const [isAnalyzingStatements, setIsAnalyzingStatements] = useState(false);
+  const [totalBalance, setTotalBalance] = useState('');
 
   const [isFirstHomeBuyer, setIsFirstHomeBuyer] = useState(true);
   const [homePrice, setHomePrice] = useState(550000);
@@ -44,6 +59,7 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
 
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
 
   const syncFromAnnual = (value: number) => {
     setAnnualSalary(value);
@@ -70,14 +86,53 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
     setSkills(shuffled.slice(0, 4));
   };
 
-  const handleBankUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.[0]) return;
-    setTimeout(() => {
-      const savings = Math.round(1000 + Math.random() * 2000);
-      const spend = Math.round(2500 + Math.random() * 1500);
-      setBankSummary({ savings, spend });
-    }, 800);
+  const analyzeIfReady = async (
+    files: (File | null)[],
+    employerHint: string,
+    employmentTypeValue: string,
+  ) => {
+    if (files.some((file) => !file)) return;
+    try {
+      setIsAnalyzingStatements(true);
+      setError('');
+      const result = await analyzeBankStatements(files as File[], {
+        employerHint,
+        employmentType: employmentTypeValue,
+      });
+      setAnalysisResult(result);
+    } catch (err) {
+      console.error(err);
+      setAnalysisResult(null);
+      setError('We could not analyze your statements. Please check the CSV format and try again.');
+    } finally {
+      setIsAnalyzingStatements(false);
+    }
   };
+
+  const handleBankUpload = (monthIndex: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.[0]) return;
+    const file = e.target.files[0];
+    setBankStatements(prev => {
+      const next = [...prev];
+      next[monthIndex] = { fileName: file.name };
+      return next;
+    });
+    setStatementFiles(prev => {
+      const next = [...prev];
+      next[monthIndex] = file;
+      return next;
+    });
+    setAnalysisResult(null);
+    const updatedFiles = statementFiles.map((existing, idx) => (idx === monthIndex ? file : existing));
+    analyzeIfReady(updatedFiles, jobTitle, employmentType);
+  };
+
+  useEffect(() => {
+    if (statementFiles.every((file) => file)) {
+      analyzeIfReady(statementFiles, jobTitle, employmentType);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobTitle, employmentType]);
 
   const handleEstimatePrice = () => {
     const base = 300000;
@@ -118,8 +173,20 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
         }
         return true;
       case 2:
-        if (!bankSummary) {
-          setError('Upload a bank statement so we can analyze your cash flow.');
+        if (!totalBalance.trim()) {
+          setError('Enter your current total balance so we know where you stand today.');
+          return false;
+        }
+        if (Number.isNaN(Number(totalBalance))) {
+          setError('Enter a valid number for your total balance.');
+          return false;
+        }
+        if (statementFiles.some(statement => !statement)) {
+          setError('Upload all three monthly CSV statements so we can analyze your cash flow.');
+          return false;
+        }
+        if (!analysisResult) {
+          setError('We are still analyzing your statements. Please wait a moment.');
           return false;
         }
         return true;
@@ -145,15 +212,47 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
     setCurrentStep(prev => Math.max(prev - 1, 0));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateCurrentStep()) return;
     setIsLoading(true);
     setError('');
-    setTimeout(() => {
+    try {
+      const profile: UserProfile = {
+        jobTitle: jobTitle.trim(),
+        jobType: employmentToJobType[employmentType] || 'Salary',
+        annualIncome: annualSalary,
+        monthlyIncome,
+        hobbies,
+        skills,
+      };
+
+      const criteria: HomeCriteria = {
+        bedrooms,
+        bathrooms,
+        location,
+        garage,
+        propertyType: 'House',
+        isFirstHomeBuyer,
+        estimatedPrice: homePrice,
+        autoEstimate: autoPrice,
+      };
+
+      const user = await registerUser({
+        fullName,
+        email,
+        password,
+        profile,
+        criteria,
+        bankAnalysis: analysisResult,
+        totalBalance: Number(totalBalance),
+      });
+      onSuccess(user);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Sorry, we could not create your account.');
+    } finally {
       setIsLoading(false);
-      onSuccess();
-    }, 1200);
+    }
   };
 
   const renderAccountStep = () => (
@@ -161,45 +260,45 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
       <h2 className="text-lg font-semibold text-text-primary mb-3">Account</h2>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
-          <label className="text-sm font-medium text-text-secondary">Full Name</label>
           <input
             type="text"
-            className={`${inputClasses} mt-1`}
+            className={inputClasses}
+            aria-label="Full Name"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            placeholder="Sam Lee"
+            placeholder="Full Name"
           />
         </div>
         <div>
-          <label className="text-sm font-medium text-text-secondary">Email</label>
           <input
             type="email"
-            className={`${inputClasses} mt-1`}
+            className={inputClasses}
+            aria-label="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            placeholder="Email"
           />
         </div>
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 mt-4">
         <div>
-          <label className="text-sm font-medium text-text-secondary">Password</label>
           <input
             type="password"
-            className={`${inputClasses} mt-1`}
+            className={inputClasses}
+            aria-label="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Create a strong password"
+            placeholder="Password"
           />
         </div>
         <div>
-          <label className="text-sm font-medium text-text-secondary">Confirm Password</label>
           <input
             type="password"
-            className={`${inputClasses} mt-1`}
+            className={inputClasses}
+            aria-label="Confirm Password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Repeat your password"
+            placeholder="Confirm Password"
           />
         </div>
       </div>
@@ -211,10 +310,15 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
           onChange={(e) => setAcceptTerms(e.target.checked)}
         />
         <span>
-          I agree to the{' '}
-          <button type="button" className="font-semibold text-primary hover:text-accent">
+          I agree to the{" "}
+          <a
+            className="font-semibold text-primary hover:text-accent underline"
+            href="/Terms_of_Use_and_Privacy_Policy.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             Terms & Privacy Policy
-          </button>
+          </a>
         </span>
       </label>
     </Card>
@@ -225,21 +329,21 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
       <h2 className="text-lg font-semibold text-text-primary mb-3">Job & Skills</h2>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
-          <label className="text-sm font-medium text-text-secondary">Job Title</label>
           <input
             type="text"
-            className={`${inputClasses} mt-1`}
+            className={inputClasses}
+            aria-label="Job Title"
             value={jobTitle}
             onChange={(e) => setJobTitle(e.target.value)}
-            placeholder="e.g., Product Manager"
+            placeholder="Job Title"
           />
         </div>
         <div>
-          <label className="text-sm font-medium text-text-secondary">Employment Type</label>
           <select
-            className={`${inputClasses} mt-1`}
+            className={inputClasses}
             value={employmentType}
             onChange={(e) => setEmploymentType(e.target.value)}
+            aria-label="Employment Type"
           >
             {employmentTypes.map(type => (
               <option key={type} value={type}>{type}</option>
@@ -249,34 +353,36 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 mt-4">
         <div>
-          <label className="text-sm font-medium text-text-secondary">Annual Salary ($)</label>
           <input
             type="number"
-            className={`${inputClasses} mt-1`}
+            className={inputClasses}
+            aria-label="Annual Salary ($)"
             value={annualSalary}
             onChange={(e) => syncFromAnnual(Number(e.target.value))}
+            placeholder="Annual Salary ($)"
           />
         </div>
         <div>
-          <label className="text-sm font-medium text-text-secondary">Monthly Income ($)</label>
           <input
             type="number"
-            className={`${inputClasses} mt-1`}
+            className={inputClasses}
+            aria-label="Monthly Income ($)"
             value={monthlyIncome}
             onChange={(e) => syncFromMonthly(Number(e.target.value))}
+            placeholder="Monthly Income ($)"
           />
         </div>
       </div>
       <div className="mt-4 space-y-3">
         <div>
-          <label className="text-sm font-medium text-text-secondary">Hobbies</label>
           <div className="mt-1 flex gap-2">
             <input
               type="text"
               className={inputClasses}
               value={hobbyInput}
               onChange={(e) => setHobbyInput(e.target.value)}
-              placeholder="e.g., Photography"
+              placeholder="Hobbies"
+              aria-label="Hobbies"
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddHobby())}
             />
             <Button variant="secondary" onClick={handleAddHobby}>Add</Button>
@@ -308,31 +414,58 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
   );
 
   const renderBankStep = () => (
-    <Card>
-      <h2 className="text-lg font-semibold text-text-primary mb-3">Bank Statement</h2>
-      <p className="text-sm text-text-secondary">Upload the past 3 months (CSV or PDF). We’ll simulate insights for now.</p>
-      <div className="mt-3">
-        <input type="file" id="bank-upload" accept=".csv,.pdf" className="hidden" onChange={handleBankUpload} />
-        <label
-          htmlFor="bank-upload"
-          className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white"
-        >
-          <Icon name="upload" className="h-5 w-5" /> Upload statement
-        </label>
-      </div>
-      {bankSummary ? (
-        <div className="mt-4 grid grid-cols-2 gap-4">
-          <div className="rounded-xl bg-light-gray/80 px-4 py-3">
-            <p className="text-xs text-text-secondary">Avg Monthly Savings</p>
-            <p className="text-lg font-bold text-primary">${bankSummary.savings.toLocaleString()}</p>
+      <Card>
+        <h2 className="text-lg font-semibold text-text-primary mb-3">Bank Statements</h2>
+        <p className="text-sm text-text-secondary">Upload three consecutive months (CSV). We'll analyze cash flow.</p>
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {[0, 1, 2].map((idx) => (
+          <div key={idx} className="flex flex-col gap-2 rounded-xl border border-dashed border-gray-300 bg-light-gray/40 p-3">
+            <label className="text-xs font-semibold text-text-secondary">Month {idx + 1}</label>
+            <input
+              type="file"
+              accept=".csv"
+              className="text-xs"
+              onChange={handleBankUpload(idx)}
+            />
+            <span className="text-xs text-text-primary break-all">
+              {bankStatements[idx]?.fileName || 'No file chosen'}
+            </span>
           </div>
-          <div className="rounded-xl bg-light-gray/80 px-4 py-3">
+        ))}
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-4">
+        <div>
+          <input
+            type="number"
+            className={inputClasses}
+            aria-label="Total Balance ($)"
+            value={totalBalance}
+            onChange={(e) => setTotalBalance(e.target.value)}
+            placeholder="Total Balance ($)"
+          />
+        </div>
+        <div className="flex items-end">
+          <p className="text-xs text-text-secondary">
+            We'll use this to personalise your current savings and ETA.
+          </p>
+        </div>
+      </div>
+      {isAnalyzingStatements && (
+        <div className="mt-4 rounded-xl bg-light-gray/80 px-4 py-3 text-sm text-text-secondary">
+          Analyzing statements...
+        </div>
+      )}
+      {analysisResult && (
+        <div className="mt-4 grid grid-cols-2 gap-3 rounded-2xl bg-light-gray/60 p-3 text-sm text-text-primary">
+          <div>
             <p className="text-xs text-text-secondary">Avg Monthly Spend</p>
-            <p className="text-lg font-bold text-red-500">${bankSummary.spend.toLocaleString()}</p>
+            <p className="font-semibold">${analysisResult.monthlyAverageSpend.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+          </div>
+          <div>
+            <p className="text-xs text-text-secondary">Avg Monthly Savings</p>
+            <p className="font-semibold text-green-600">${analysisResult.monthlyAverageSavings.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
           </div>
         </div>
-      ) : (
-        <p className="mt-3 text-xs text-text-secondary">No file processed yet.</p>
       )}
     </Card>
   );
@@ -356,16 +489,17 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
         </Button>
       </div>
       <div className="mt-4">
-        <label className="text-sm font-medium text-text-secondary">Target Price</label>
         <input
           type="number"
-          className={`${inputClasses} mt-1`}
+          className={inputClasses}
           value={homePrice}
           onChange={(e) => {
             setHomePrice(Number(e.target.value));
             setAutoPrice(false);
           }}
           disabled={autoPrice}
+          aria-label="Target Price"
+          placeholder="Target Price"
         />
         <div className="mt-2 flex items-center gap-2 text-xs text-text-secondary flex-wrap">
           <label className="flex items-center gap-2">
@@ -382,23 +516,22 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
           </Button>
         </div>
       </div>
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <label className="text-sm font-medium text-text-secondary">Location</label>
-          <input
-            type="text"
-            className={`${inputClasses} mt-1`}
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            placeholder="City or suburb"
-            disabled={!autoPrice}
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium text-text-secondary">Garage</label>
-          <div className="mt-1 flex gap-2">
-            <Button
-              variant={garage ? 'primary' : 'secondary'}
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <input
+              type="text"
+              className={inputClasses}
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Location"
+              aria-label="Location"
+              disabled={!autoPrice}
+            />
+          </div>
+          <div>
+            <div className="mt-1 flex gap-2">
+              <Button
+                variant={garage ? 'primary' : 'secondary'}
               onClick={() => setGarage(true)}
               disabled={!autoPrice}
               className="flex-1"
@@ -416,13 +549,12 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
           </div>
         </div>
       </div>
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <label className="text-sm font-medium text-text-secondary">Bedrooms</label>
-          <input
-            type="range"
-            min={1}
-            max={5}
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <input
+              type="range"
+              min={1}
+              max={5}
             step={1}
             value={bedrooms}
             disabled={!autoPrice}
@@ -431,11 +563,10 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
           />
           <p className="text-xs text-text-secondary mt-1">{bedrooms} bedrooms</p>
         </div>
-        <div>
-          <label className="text-sm font-medium text-text-secondary">Bathrooms</label>
-          <input
-            type="range"
-            min={1}
+          <div>
+            <input
+              type="range"
+              min={1}
             max={4}
             step={1}
             value={bathrooms}
@@ -465,14 +596,14 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
   };
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-2xl flex-col space-y-6 px-4 py-6">
+    <div className="mx-auto flex min-h-screen w-full max-w-2xl flex-col space-y-6 px-4 -mt-8 pb-2">
       <div className="text-center">
-        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10 text-accent">
-          <Icon name="sparkles" className="h-7 w-7" />
+        <div className="mx-auto flex h-60 w-60 sm:h-64 sm:w-64 items-center justify-center -mb-20">
+          <img src={logo} alt="Days-to" className="block h-full w-full object-contain" />
         </div>
-        <h1 className="text-3xl font-bold text-text-primary">Let’s capture your details</h1>
+        <h1 className="text-3xl font-bold text-text-primary">Let’s add your details</h1>
         <p className="mt-1 text-sm text-text-secondary">
-          We’ll use these to personalize your insights. AI powered fields return mock values while we prototype.
+          We’ll use these to personalize your insights.
         </p>
       </div>
 
@@ -495,15 +626,14 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
         </Card>
       )}
 
-      {renderStepContent()}
-
       <Card>
+        {renderStepContent()}
         {error && (
-          <div className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+          <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
             {error}
           </div>
         )}
-        <div className="flex items-center justify-between gap-3">
+        <div className="mt-4 flex items-center justify-between gap-3">
           {currentStep > 0 ? (
             <Button variant="secondary" onClick={handlePrevStep} className="flex-1">
               Back
@@ -523,16 +653,19 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
         </div>
       </Card>
 
-      <p className="text-center text-sm text-text-secondary">
-        Already have an account?{' '}
-        <button
-          type="button"
-          className="font-semibold text-primary hover:text-accent"
-          onClick={onSwitch}
-        >
-          Sign in
-        </button>
-      </p>
+      <div className="mt-4">
+        <p className="text-center text-sm text-text-secondary">
+          Already have an account?{' '}
+          <button
+            type="button"
+            className="font-semibold text-primary hover:text-accent"
+            onClick={onSwitch}
+          >
+            Sign in
+          </button>
+        </p>
+      </div>
+
     </div>
   );
 };

@@ -14,20 +14,27 @@ interface FinancialReportProps {
 const colorPalette = ['#00C0A3', '#5EEAD4', '#FBBF24', '#FB7185', '#818CF8'];
 
 const FinancialReport: React.FC<FinancialReportProps> = ({ bankAnalysis, profile, setActivePage }) => {
+  const recurringExpenses = bankAnalysis?.recurringExpenses ?? [];
+  const recurringAmount = (item: (typeof recurringExpenses)[number]) =>
+    item.estimatedMonthlyCost ?? item.averageAmount ?? (item as any).amount ?? 0;
+
   const totalRecurring = useMemo(() => {
     if (!bankAnalysis) return 0;
-    return bankAnalysis.recurringExpenses.reduce((sum, item) => sum + item.amount, 0);
-  }, [bankAnalysis]);
+    return recurringExpenses.reduce((sum, item) => sum + recurringAmount(item), 0);
+  }, [bankAnalysis, recurringExpenses]);
 
   const chartData = useMemo(() => {
     if (!bankAnalysis) return [];
-    const items = [...bankAnalysis.recurringExpenses];
+    const items = recurringExpenses.map((item) => ({
+      name: item.name,
+      amount: recurringAmount(item),
+    }));
     const discretionary = Math.max(bankAnalysis.monthlyAverageSpend - totalRecurring, 0);
     if (discretionary > 0) {
       items.push({ name: 'Discretionary', amount: discretionary });
     }
     return items.sort((a, b) => b.amount - a.amount);
-  }, [bankAnalysis, totalRecurring]);
+  }, [bankAnalysis, recurringExpenses, totalRecurring]);
 
   const savingsRate = useMemo(() => {
     if (!bankAnalysis) return 0;

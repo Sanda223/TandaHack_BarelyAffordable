@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { HomeCriteria, Page, UserProfile } from '../types';
+import { BankStatementAnalysis, HomeCriteria, Page, UserProfile } from '../types';
 import Card from '../components/Card';
 import { generateIncomeOpportunities, generateSpendingSuggestions, analyzePriceFromImage } from '../services/geminiService';
 import Icon from '../components/Icon';
@@ -29,11 +29,22 @@ const SuggestionCard: React.FC<{ title: string; description: string; value: stri
   </div>
 );
 
-const Dashboard: React.FC<{ profile: UserProfile, criteria: HomeCriteria, setActivePage: (page: Page) => void, interestRate: number, loanTerm: number }> = ({ profile, criteria, setActivePage, interestRate, loanTerm }) => {
-  const [currentSavings] = useState(15750);
+interface DashboardProps {
+  profile: UserProfile;
+  criteria: HomeCriteria;
+  setActivePage: (page: Page) => void;
+  interestRate: number;
+  loanTerm: number;
+  fullName?: string;
+  totalBalance?: number | null;
+  bankAnalysis?: BankStatementAnalysis | null;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ profile, criteria, setActivePage, interestRate, loanTerm, fullName, totalBalance, bankAnalysis }) => {
+  const currentSavings = totalBalance ?? 0;
   const [incomeOpportunities, setIncomeOpportunities] = useState<any[]>([]);
   const [spendingSuggestions, setSpendingSuggestions] = useState<any[]>([]);
-
+  
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzedPrice, setAnalyzedPrice] = useState<number | null>(null);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
@@ -48,7 +59,12 @@ const Dashboard: React.FC<{ profile: UserProfile, criteria: HomeCriteria, setAct
 
   const depositGoal = useMemo(() => criteria.estimatedPrice * (criteria.isFirstHomeBuyer ? 0.05 : 0.20), [criteria.estimatedPrice, criteria.isFirstHomeBuyer]);
   
-  const monthlySavings = useMemo(() => profile.monthlyIncome * 0.25, [profile.monthlyIncome]); // Simple assumption
+  const monthlySavings = useMemo(() => {
+    if (bankAnalysis?.monthlyAverageSavings !== undefined) {
+      return bankAnalysis.monthlyAverageSavings;
+    }
+    return profile.monthlyIncome * 0.25;
+  }, [bankAnalysis?.monthlyAverageSavings, profile.monthlyIncome]);
   const dailySavings = useMemo(() => monthlySavings / (365.25 / 12), [monthlySavings]);
 
   const daysToGoal = useMemo(() => {
@@ -85,6 +101,7 @@ const Dashboard: React.FC<{ profile: UserProfile, criteria: HomeCriteria, setAct
   }, [currentSavings, depositGoal]);
 
   const isNumericDaysToGoal = typeof daysToGoal === 'number';
+  const greetingName = (fullName?.trim().split(' ')[0]) || 'there';
 
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -133,7 +150,7 @@ const Dashboard: React.FC<{ profile: UserProfile, criteria: HomeCriteria, setAct
     <div className="space-y-6 pb-6">
       <header>
         <h1 className="text-2xl sm:text-3xl font-bold text-text-primary flex items-center">
-          Hey there!
+          Hey, {greetingName}!
           <Icon name="hand-wave" className="w-6 h-6 sm:w-8 sm:h-8 ml-2" />
         </h1>
         <p className="text-xs sm:text-sm text-text-secondary">

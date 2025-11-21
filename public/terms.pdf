@@ -1,0 +1,504 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 11198 >>
+stream
+BT
+/F1 10 Tf
+50 770 Td
+12 TL
+(HomeStart – Terms of Use & Privacy Policy \(Australia\)) Tj
+T*
+(====================================================) Tj
+T*
+T*
+T*
+(**Effective:** 1 January 2025) Tj
+T*
+(**Last Updated:** 1 January 2025) Tj
+T*
+T*
+T*
+(These Terms of Use and Privacy Policy \(“Terms”\) apply to your use of HomeStart) Tj
+T*
+(\(“HomeStart”, “we”, “our”, “us”\), including all services, tools, calculators, estimates,) Tj
+T*
+(reports, and any AI-assisted features provided through the HomeStart website or web) Tj
+T*
+(application \(“Service”\).) Tj
+T*
+T*
+T*
+(By accessing or using HomeStart, you agree to be bound by these Terms. If you do not) Tj
+T*
+(agree, you must not use HomeStart.) Tj
+T*
+T*
+T*
+(This document is provided for transparency and compliance with the Privacy Act 1988 \(Cth\)) Tj
+T*
+(and the Australian Privacy Principles \(APPs\). HomeStart does not provide legal, financial,) Tj
+T*
+(or tax advice.) Tj
+T*
+T*
+T*
+(1. Overview) Tj
+T*
+(HomeStart is a browser-based tool that helps users understand spending habits, savings) Tj
+T*
+(trajectory, and approximate affordability insights for home ownership. All calculations) Tj
+T*
+(are general information only and should not be relied upon as professional advice.) Tj
+T*
+T*
+T*
+(The Service:) Tj
+T*
+(- processes information you provide,) Tj
+T*
+(- uses in-browser storage to save your data locally,) Tj
+T*
+(- may optionally use external AI services if you enable them,) Tj
+T*
+(- provides generalised estimates, not financial assessments.) Tj
+T*
+T*
+T*
+(2. Eligibility & User Responsibilities) Tj
+T*
+(You may use HomeStart only if:) Tj
+T*
+(- you are 13 years or older,) Tj
+T*
+(- you are legally capable of entering a binding agreement,) Tj
+T*
+(- your use of the Service complies with Australian law and any relevant local laws.) Tj
+T*
+T*
+T*
+(By using HomeStart, you agree to:) Tj
+T*
+(- provide accurate and truthful information,) Tj
+T*
+(- only upload documents you own or are authorised to upload,) Tj
+T*
+(- keep your login or browser session secure,) Tj
+T*
+(- not misuse the Service or attempt to reverse-engineer, disrupt, or interfere with it.) Tj
+T*
+T*
+T*
+(3. No Financial, Legal or Professional Advice) Tj
+T*
+(HomeStart is not a financial adviser, mortgage broker, tax agent, legal professional, or) Tj
+T*
+(credit provider.) Tj
+T*
+T*
+T*
+(All outputs—including affordability estimates, timelines, calculations, expenditure) Tj
+T*
+(breakdowns, AI-generated summaries, or suggestions—are:) Tj
+T*
+(- general commentary only,) Tj
+T*
+(- not specific to your personal financial situation,) Tj
+T*
+(- not regulated financial product advice,) Tj
+T*
+(- not credit advice, and) Tj
+T*
+(- not a substitute for independent professional advice.) Tj
+T*
+T*
+T*
+(You are solely responsible for evaluating the accuracy and suitability of any output) Tj
+T*
+(before acting on it.) Tj
+T*
+T*
+T*
+(4. Accounts, Security & Browser Storage) Tj
+T*
+(HomeStart does not require a traditional password-based account system. Instead, your) Tj
+T*
+(session may be stored using localStorage and/or sessionStorage within your web browser.) Tj
+T*
+T*
+T*
+(You acknowledge that:) Tj
+T*
+(- clearing your browser storage may delete your data,) Tj
+T*
+(- you are responsible for protecting your device and browser,) Tj
+T*
+(- if you share your device, others may access your HomeStart session.) Tj
+T*
+T*
+T*
+(HomeStart is not responsible for unauthorised access caused by your device, browser, or) Tj
+T*
+(network configuration.) Tj
+T*
+T*
+T*
+(5. Information We Collect) Tj
+T*
+(Under the Privacy Act and APPs, “personal information” is any identifiable information) Tj
+T*
+(about you. HomeStart may collect and process the following categories of data only when) Tj
+T*
+(you provide them:) Tj
+T*
+T*
+T*
+(5.1 Personal Profile Information) Tj
+T*
+(- Name \(optional\)) Tj
+T*
+(- Email \(optional\)) Tj
+T*
+(- Age or household details \(optional\)) Tj
+T*
+(- Savings goals, home preferences, suburb criteria) Tj
+T*
+T*
+T*
+(5.2 Financial Inputs) Tj
+T*
+(- Employment details) Tj
+T*
+(- Income estimates) Tj
+T*
+(- Savings balances) Tj
+T*
+(- Expenses you input manually) Tj
+T*
+T*
+T*
+(5.3 Uploaded Documents) Tj
+T*
+(If you upload bank statements \(CSV/PDF\), HomeStart may extract:) Tj
+T*
+(- transaction data) Tj
+T*
+(- merchant names) Tj
+T*
+(- spending categories) Tj
+T*
+(- income inflows) Tj
+T*
+(- savings patterns) Tj
+T*
+T*
+T*
+(HomeStart processes these files in-session. Files are not transmitted to any external) Tj
+T*
+(server unless you explicitly enable AI features that send data to a third-party AI) Tj
+T*
+(provider.) Tj
+T*
+T*
+T*
+(5.4 Device & Technical Data) Tj
+T*
+(- Standard analytics such as browser type, timestamps, anonymised usage patterns) Tj
+T*
+(- Used solely to improve the user experience.) Tj
+T*
+T*
+T*
+(6. How We Process Data) Tj
+T*
+(HomeStart processes your data to:) Tj
+T*
+(- generate budgeting insights,) Tj
+T*
+(- calculate affordability estimates,) Tj
+T*
+(- identify spending trends,) Tj
+T*
+(- generate AI-assisted summaries \(if enabled\),) Tj
+T*
+(- personalise your dashboard experience.) Tj
+T*
+T*
+T*
+(Data is processed only within your browser unless you deliberately enable an external AI) Tj
+T*
+(integration. HomeStart does not store your personal information on our servers unless) Tj
+T*
+(explicitly stated elsewhere.) Tj
+T*
+T*
+T*
+(7. Optional AI Features) Tj
+T*
+(HomeStart may integrate with third-party AI providers \(e.g., Google Gemini, OpenAI\) only) Tj
+T*
+(if you enter your own API key.) Tj
+T*
+T*
+T*
+(When you enable an AI feature:) Tj
+T*
+(- relevant input data may be sent to the third-party provider you chose,) Tj
+T*
+(- the processing of that data is governed by their privacy policies and terms of service,) Tj
+T*
+(- HomeStart does not control how those providers store, process, or retain your data.) Tj
+T*
+T*
+T*
+(You acknowledge that:) Tj
+T*
+(- AI outputs may be inaccurate or incomplete,) Tj
+T*
+(- you must verify all AI-generated information,) Tj
+T*
+(- disabling AI features stops further data sharing but does not affect data the provider) Tj
+T*
+(may have already processed.) Tj
+T*
+T*
+T*
+(HomeStart never sells or monetises your uploaded data.) Tj
+T*
+T*
+T*
+(8. Legal Basis for Processing \(APP Compliance\)) Tj
+T*
+(Under the Australian Privacy Principles, HomeStart processes personal information on the) Tj
+T*
+(basis of:) Tj
+T*
+(- **APP 3 – Collection:** You provide information voluntarily.) Tj
+T*
+(- **APP 6 – Use & Disclosure:** Data is used only to provide the Service.) Tj
+T*
+(- **APP 11 – Security:** We implement reasonable security measures.) Tj
+T*
+(- **APP 12 & 13 – Access & Correction:** You may review or edit your inputs inside the) Tj
+T*
+(app.) Tj
+T*
+T*
+T*
+(You may request access, correction, or deletion of any server-side data if applicable) Tj
+T*
+(\(most data is local and controlled by you\).) Tj
+T*
+T*
+T*
+(9. Data Storage, Retention & Security) Tj
+T*
+(9.1 Local Storage) Tj
+T*
+(HomeStart stores your information locally in your browser. This means:) Tj
+T*
+(- you retain full control over your data,) Tj
+T*
+(- clearing your browser storage removes all local data,) Tj
+T*
+(- HomeStart cannot guarantee recovery of deleted information.) Tj
+T*
+T*
+T*
+(9.2 Uploaded Files) Tj
+T*
+(Uploaded bank statements are:) Tj
+T*
+(- processed instantly in your browser,) Tj
+T*
+(- not automatically uploaded to HomeStart servers,) Tj
+T*
+(- not preserved once you close or clear your session.) Tj
+T*
+T*
+T*
+(9.3 Security Measures) Tj
+T*
+(We take reasonable steps to secure the Service, but:) Tj
+T*
+(- no internet service is completely secure,) Tj
+T*
+(- security also depends on your device and browser settings,) Tj
+T*
+(- you must take steps to protect your device from unauthorised access.) Tj
+T*
+T*
+T*
+(HomeStart is not liable for breaches arising from your device, browser vulnerabilities,) Tj
+T*
+(Wi-Fi networks, or third-party tools you enable.) Tj
+T*
+T*
+T*
+(10. Prohibited Conduct) Tj
+T*
+(You must not:) Tj
+T*
+(- use HomeStart for unlawful, harmful, or fraudulent purposes,) Tj
+T*
+(- attempt to reverse-engineer or disrupt the Service,) Tj
+T*
+(- upload data that violates privacy, copyright, or any law,) Tj
+T*
+(- impersonate another person or misrepresent information,) Tj
+T*
+(- use outputs as financial or lending advice.) Tj
+T*
+T*
+T*
+(11. Limitation of Liability) Tj
+T*
+(To the maximum extent permitted under Australian law:) Tj
+T*
+(- HomeStart provides all features “as is” and “as available.”) Tj
+T*
+(- We do not guarantee accuracy, reliability, or completeness of any information generated) Tj
+T*
+(by the Service.) Tj
+T*
+(- We are not liable for any loss, damage, financial decision, or reliance arising from) Tj
+T*
+(your use of HomeStart, including:) Tj
+T*
+(- inaccurate estimates,) Tj
+T*
+(- misclassified transactions,) Tj
+T*
+(- AI-generated errors,) Tj
+T*
+(- browser storage failures,) Tj
+T*
+(- unauthorised access to your device or session.) Tj
+T*
+T*
+T*
+(Your sole remedy for dissatisfaction with the Service is to discontinue using it. Nothing) Tj
+T*
+(in these Terms excludes rights under the Australian Consumer Law \(ACL\) that cannot be) Tj
+T*
+(excluded.) Tj
+T*
+T*
+T*
+(12. Your Rights Under the Australian Privacy Principles \(APPs\)) Tj
+T*
+(You have the right to:) Tj
+T*
+(- request access to personal information held by HomeStart \(if any\),) Tj
+T*
+(- request correction of inaccurate information,) Tj
+T*
+(- make privacy complaints,) Tj
+T*
+(- withdraw AI permissions at any time.) Tj
+T*
+T*
+T*
+(Because most data is stored locally in your browser, you may modify or delete it yourself) Tj
+T*
+(by clearing storage or editing data within the app.) Tj
+T*
+T*
+T*
+(13. Cookies & Tracking Technologies) Tj
+T*
+(HomeStart may use local browser storage, session storage, and lightweight cookies \(if) Tj
+T*
+(introduced later\). These are used solely to:) Tj
+T*
+(- maintain your session,) Tj
+T*
+(- remember your settings,) Tj
+T*
+(- improve usability.) Tj
+T*
+T*
+T*
+(HomeStart does not use third-party advertising cookies.) Tj
+T*
+T*
+T*
+(14. Children’s Privacy) Tj
+T*
+(HomeStart is not intended for children under 13 years of age. If you are under 13, do not) Tj
+T*
+(use the Service or submit personal information.) Tj
+T*
+T*
+T*
+(15. Changes to These Terms) Tj
+T*
+(We may update or revise these Terms from time to time. When we make changes:) Tj
+T*
+(- the “Last Updated” date will change,) Tj
+T*
+(- continued use of HomeStart constitutes acceptance of the updated Terms.) Tj
+T*
+T*
+T*
+(If changes significantly impact your rights, we may display a notice within the app.) Tj
+T*
+T*
+T*
+(16. Contact & Complaints) Tj
+T*
+(If you have questions or wish to make a privacy complaint, contact us at:) Tj
+T*
+(- 📧 privacy@homestart.example \(replace with your preferred operational email\)) Tj
+T*
+T*
+T*
+(If you are unsatisfied with our response, you may complain to:) Tj
+T*
+(- Office of the Australian Information Commissioner \(OAIC\) — https://www.oaic.gov.au) Tj
+T*
+T*
+T*
+(17. Acceptance) Tj
+T*
+(By using HomeStart, you acknowledge that:) Tj
+T*
+(- you have read these Terms,) Tj
+T*
+(- you understand them,) Tj
+T*
+(- you agree to be bound by them,) Tj
+T*
+(- your data may be processed as described in this document.) Tj
+T*
+T*
+T*
+(If you do not agree, you must stop using HomeStart.) Tj
+T*
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000185 00000 n 
+0000000311 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+11562
+%%EOF

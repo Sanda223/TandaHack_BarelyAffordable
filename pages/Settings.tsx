@@ -12,6 +12,7 @@ interface SettingsProps {
   interestRate: number;
   setInterestRate: React.Dispatch<React.SetStateAction<number>>;
   setActivePage: (page: Page) => void;
+  onSignOut?: () => void;
 }
 
 interface SliderProps {
@@ -55,7 +56,7 @@ const InputField: React.FC<{label: string, children: React.ReactNode}> = ({label
     </div>
 );
 
-const Settings: React.FC<SettingsProps> = ({ criteria, setCriteria, loanTerm, setLoanTerm, interestRate, setInterestRate, setActivePage }) => {
+const Settings: React.FC<SettingsProps> = ({ criteria, setCriteria, loanTerm, setLoanTerm, interestRate, setInterestRate, setActivePage, onSignOut }) => {
   const propertyTypes: HomeCriteria['propertyType'][] = ['House', 'Apartment', 'Townhouse'];
   
   return (
@@ -218,6 +219,11 @@ const Settings: React.FC<SettingsProps> = ({ criteria, setCriteria, loanTerm, se
       <Button onClick={() => setActivePage(Page.Dashboard)} variant="secondary" className="w-full">
         Back to Dashboard
       </Button>
+      {onSignOut && (
+        <Button onClick={onSignOut} variant="ghost" className="w-full">
+          Sign out
+        </Button>
+      )}
     </div>
   );
 };
