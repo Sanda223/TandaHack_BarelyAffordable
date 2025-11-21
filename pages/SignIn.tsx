@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
-import Icon from '../components/Icon';
+import logo from '../assets/logo.png';
 
 interface SignInProps {
   onSuccess: () => void;
@@ -34,17 +34,18 @@ const SignIn: React.FC<SignInProps> = ({ onSuccess, onSwitch }) => {
   };
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center space-y-6 px-4 py-8">
+    <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-6">
       <div className="text-center">
-        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-          <Icon name="home" className="h-7 w-7" />
+        <div className="mx-auto flex h-60 w-60 sm:h-64 sm:w-64 items-center justify-center -mb-16">
+          <img src={logo} alt="Days-to" className="block h-full w-full object-contain" />
         </div>
-        <h1 className="text-3xl font-bold text-text-primary">Welcome Back</h1>
+        <h1 className="text-3xl font-bold text-text-primary leading-tight -mt-1">Welcome Back</h1>
         <p className="mt-1 text-sm text-text-secondary">
           Sign in to continue tracking your path to homeownership.
         </p>
       </div>
 
+      <div className="mt-4">
       <Card>
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div>
@@ -69,21 +70,6 @@ const SignIn: React.FC<SignInProps> = ({ onSuccess, onSwitch }) => {
               autoComplete="current-password"
             />
           </div>
-          <div className="flex items-center justify-between text-sm">
-            <label className="flex cursor-pointer items-center gap-2 text-text-secondary">
-              <input
-                type="checkbox"
-                className="rounded border-gray-300 text-primary focus:ring-primary"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-              />
-              Remember me
-            </label>
-            <button type="button" className="font-semibold text-primary hover:text-accent">
-              Forgot password?
-            </button>
-          </div>
-
           {error && (
             <div className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
               {error}
@@ -93,19 +79,28 @@ const SignIn: React.FC<SignInProps> = ({ onSuccess, onSwitch }) => {
           <Button type="submit" className="w-full" isLoading={isLoading}>
             Sign In
           </Button>
+
+          <div className="flex justify-center">
+            <button type="button" className="text-sm font-semibold text-primary hover:text-accent">
+              Forgot password?
+            </button>
+          </div>
         </form>
       </Card>
+      </div>
 
-      <p className="text-center text-sm text-text-secondary">
-        Don't have an account?{' '}
-        <button
-          type="button"
-          className="font-semibold text-primary hover:text-accent"
-          onClick={onSwitch}
-        >
-          Create one
-        </button>
-      </p>
+      <div className="mt-4">
+        <p className="text-center text-sm text-text-secondary">
+          Don't have an account?{' '}
+          <button
+            type="button"
+            className="font-semibold text-primary hover:text-accent"
+            onClick={onSwitch}
+          >
+            Create one
+          </button>
+        </p>
+      </div>
     </div>
   );
 };
