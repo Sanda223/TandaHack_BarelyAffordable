@@ -7,7 +7,7 @@ import Button from '../components/Button';
 import CountUp from '../components/CountUp';
 
 const KPICard: React.FC<{ title: string; value: string; icon: React.ComponentProps<typeof Icon>['name']; }> = ({ title, value, icon }) => (
-  <Card className="flex-1 text-center p-4 sm:p-6">
+  <Card className="flex-1 text-center p-4 sm:p-6 border border-primary/30">
     <div className="text-2xl sm:text-3xl mb-1 text-primary flex items-center justify-center">
       <Icon name={icon} className="w-6 h-6 sm:w-8 sm:h-8" />
     </div>
@@ -101,6 +101,15 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, criteria, setActivePage,
   }, [currentSavings, depositGoal]);
 
   const isNumericDaysToGoal = typeof daysToGoal === 'number';
+  const displayValue = useMemo(() => {
+    if (!isNumericDaysToGoal) return daysToGoal;
+    const days = daysToGoal as number;
+    if (days > 60) {
+      const months = Math.ceil(days / 30);
+      return months;
+    }
+    return days;
+  }, [daysToGoal, isNumericDaysToGoal]);
   const greetingName = (fullName?.trim().split(' ')[0]) || 'there';
 
   const fileToBase64 = (file: File): Promise<string> =>
@@ -158,7 +167,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, criteria, setActivePage,
         </p>
       </header>
 
-      <Card className="text-center relative p-5 sm:p-8">
+      <Card className="text-center relative p-5 sm:p-8 border border-primary/30">
         <button
           onClick={() => setActivePage(Page.Settings)}
           className="absolute top-3 right-3 sm:top-4 sm:right-4 text-text-secondary hover:text-primary transition-colors p-2"
@@ -173,7 +182,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, criteria, setActivePage,
           {isNumericDaysToGoal ? (
             <CountUp
               from={0}
-              to={daysToGoal as number}
+              to={displayValue as number}
               separator=","
               direction="up"
               duration={1}
@@ -184,7 +193,9 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, criteria, setActivePage,
           )}
         </p>
 
-        <p className="text-sm sm:text-lg text-text-secondary -mt-2">days away!</p>
+        <p className="text-sm sm:text-lg text-text-secondary -mt-2">
+          {isNumericDaysToGoal && (daysToGoal as number) > 60 ? 'months away!' : 'days away!'}
+        </p>
 
         <div className="mt-6 pt-6 border-t border-gray-200 flex flex-col sm:flex-row sm:justify-between sm:items-center text-left gap-4 sm:gap-0">
           <div>
@@ -205,7 +216,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, criteria, setActivePage,
         </div>
       </Card>
 
-      <Card>
+      <Card className="border border-primary/30">
         <h2 className="text-lg sm:text-xl font-bold text-text-primary mb-4 flex items-center">
           Expense Impact Analyzer <Icon name="camera" className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
         </h2>
@@ -253,7 +264,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, criteria, setActivePage,
         )}
       </Card>
 
-      <Card>
+      <Card className="border border-primary/30">
         <h2 className="text-lg sm:text-xl font-bold text-text-primary mb-4 flex items-center">
           AI-Powered Suggestions <Icon name="sparkles" className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
         </h2>

@@ -52,10 +52,10 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
 
   const [isFirstHomeBuyer, setIsFirstHomeBuyer] = useState(true);
   const [isCitizen, setIsCitizen] = useState<boolean | null>(null);
+  const cities = ['Sydney', 'Melbourne', 'Brisbane', 'Adelaide', 'Perth', 'Hobart', 'Darwin', 'Canberra'];
   const [homePrice, setHomePrice] = useState<number | null>(null);
   const [autoPrice, setAutoPrice] = useState(false);
-  const cities: string[] = [];
-  const [location, setLocation] = useState('');
+  const [location, setLocation] = useState(cities[0]);
   const [bedrooms, setBedrooms] = useState(3);
   const [bathrooms, setBathrooms] = useState(2);
   const [garage, setGarage] = useState(true);
@@ -261,6 +261,20 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
     });
   };
 
+  useEffect(() => {
+    if (!autoPrice) return;
+    estimateFromSpecs().then((price) => {
+      if (price !== null && !Number.isNaN(price)) {
+        const rounded = Math.round(price);
+        setAutoEstimatePrice(rounded);
+        setHomePrice(rounded);
+      } else {
+        setAutoEstimatePrice(null);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoPrice, location, bedrooms, bathrooms, garage]);
+
   const validateCurrentStep = () => {
     switch (currentStep) {
       case 0:
@@ -380,8 +394,8 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
   };
 
   const renderAccountStep = () => (
-    <Card>
-      <h2 className="text-lg font-semibold text-text-primary mb-3">Account</h2>
+      <Card>
+        <h2 className="text-lg font-semibold text-text-primary mb-3">Account</h2>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <input
