@@ -10,8 +10,8 @@ interface TopBarProps {
 const TopBar: React.FC<TopBarProps> = ({ setActivePage }) => (
   <div className="fixed inset-x-0 top-0 z-20 bg-background/90 backdrop-blur px-4 md:px-6">
     <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-2">
-      <div className="flex items-center gap-2 pl-2 -mt-4 -mb-6">
-        <img src={logo} alt="Days-to" className="h-28 w-28 object-contain" />
+      <div className="flex items-center gap-2 pl-2 -mt-8 -mb-9">
+        <img src={logo} alt="Days-to" className="h-36 w-36 object-contain" />
       </div>
       <div className="pr-2">
         <button

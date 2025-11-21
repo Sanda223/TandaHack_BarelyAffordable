@@ -167,3 +167,46 @@ export const analyzePriceFromImage = async (base64Image: string, mimeType: strin
         return 0;
     }
 };
+
+export const shortenExpenseNames = async (names: string[]): Promise<Record<string, string>> => {
+  const ai = getAi();
+  if (!ai) {
+    // Fallback: truncate long names locally
+    return names.reduce<Record<string, string>>((acc, name) => {
+      acc[name] = name.length > 16 ? `${name.slice(0, 13)}...` : name;
+      return acc;
+    }, {});
+  }
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `Shorten these merchant/category names to concise labels (max 14 characters) that still convey meaning. Return JSON with original and shortName fields. Names: ${names.join(', ')}`,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              original: { type: Type.STRING },
+              shortName: { type: Type.STRING },
+            },
+            required: ['original', 'shortName'],
+          },
+        },
+      },
+    });
+    const parsed = JSON.parse(response.text) as { original: string; shortName: string }[];
+    return parsed.reduce<Record<string, string>>((acc, item) => {
+      acc[item.original] = item.shortName || item.original;
+      return acc;
+    }, {});
+  } catch (error) {
+    console.error('Error shortening expense names:', error);
+    return names.reduce<Record<string, string>>((acc, name) => {
+      acc[name] = name.length > 16 ? `${name.slice(0, 13)}...` : name;
+      return acc;
+    }, {});
+  }
+};

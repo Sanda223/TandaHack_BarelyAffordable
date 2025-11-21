@@ -7,7 +7,7 @@ import Button from '../components/Button';
 import CountUp from '../components/CountUp';
 
 const KPICard: React.FC<{ title: string; value: string; icon: React.ComponentProps<typeof Icon>['name']; }> = ({ title, value, icon }) => (
-  <Card className="flex-1 text-center p-4 sm:p-6 border border-primary/30">
+  <Card className="flex-1 text-center p-4 sm:p-6">
     <div className="text-2xl sm:text-3xl mb-1 text-primary flex items-center justify-center">
       <Icon name={icon} className="w-6 h-6 sm:w-8 sm:h-8" />
     </div>
@@ -158,16 +158,13 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, criteria, setActivePage,
   return (
     <div className="space-y-6 pb-6">
       <header>
-        <h1 className="text-2xl sm:text-3xl font-bold text-text-primary flex items-center">
-          Hey, {greetingName}!
-          <Icon name="hand-wave" className="w-6 h-6 sm:w-8 sm:h-8 ml-2" />
-        </h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">Hey, {greetingName}!</h1>
         <p className="text-xs sm:text-sm text-text-secondary">
           Here's your progress toward your new home.
         </p>
       </header>
 
-      <Card className="text-center relative p-5 sm:p-8 border border-primary/30">
+      <Card className="text-center relative p-5 sm:p-8">
         <button
           onClick={() => setActivePage(Page.Settings)}
           className="absolute top-3 right-3 sm:top-4 sm:right-4 text-text-secondary hover:text-primary transition-colors p-2"
@@ -197,12 +194,13 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, criteria, setActivePage,
           {isNumericDaysToGoal && (daysToGoal as number) > 60 ? 'months away!' : 'days away!'}
         </p>
 
-        <div className="mt-6 pt-6 border-t border-gray-200 flex flex-col sm:flex-row sm:justify-between sm:items-center text-left gap-4 sm:gap-0">
-          <div>
+        <div className="mt-6 pt-6 border-t border-gray-200 flex flex-row items-center text-left gap-4">
+          <div className="flex-1">
             <p className="text-xs sm:text-sm text-text-secondary">Current Savings</p>
             <p className="font-bold text-lg sm:text-xl text-text-primary">${currentSavings.toLocaleString()}</p>
           </div>
-          <div className="text-left sm:text-right">
+          <div className="h-10 w-px bg-gray-200" aria-hidden="true" />
+          <div className="flex-1 text-right">
             <p className="text-xs sm:text-sm text-text-secondary">Deposit Goal</p>
             <p className="font-bold text-lg sm:text-xl text-text-primary">${depositGoal.toLocaleString()}</p>
           </div>
@@ -216,46 +214,67 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, criteria, setActivePage,
         </div>
       </Card>
 
-      <Card className="border border-primary/30">
-        <h2 className="text-lg sm:text-xl font-bold text-text-primary mb-4 flex items-center">
-          Expense Impact Analyzer <Icon name="camera" className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
-        </h2>
+      <Card>
+        <h2 className="text-lg sm:text-xl font-bold text-text-primary mb-4">Expense Impact</h2>
         <p className="text-xs sm:text-sm text-text-secondary mb-4">
-          Snap a price tag to see how it affects your homeownership timeline.
+          Enter a purchase amount to see how it affects your homeownership timeline.
         </p>
-        <input
-          type="file"
-          accept="image/*"
-          capture="environment"
-          id="expense-analyzer-input"
-          className="hidden"
-          onChange={(e) => {
-            if (e.target.files && e.target.files[0]) {
-              handleImageUpload(e.target.files[0]);
-            }
-            if (e.target) {
-              e.target.value = '';
-            }
-          }}
-        />
-        <Button
-          onClick={() => document.getElementById('expense-analyzer-input')?.click()}
-          variant="secondary"
-          className="w-full"
-          isLoading={isAnalyzing}
-        >
-          <Icon name="camera" className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-          {isAnalyzing ? "Analyzing..." : "Analyze Purchase"}
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            type="number"
+            min={0}
+            className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            placeholder="e.g., 250"
+            aria-label="Purchase amount"
+            value={analyzedPrice ?? ''}
+            onChange={(e) => {
+              const val = e.target.value;
+              const num = val === '' ? null : Number(val);
+              setAnalyzedPrice(num);
+              setAnalysisResult(null);
+            }}
+          />
+          <Button
+            onClick={() => {
+              if (analyzedPrice === null || Number.isNaN(analyzedPrice)) {
+                setAnalysisResult("Please enter a valid amount.");
+                return;
+              }
+              if (analyzedPrice <= 0) {
+                setAnalysisResult("Amount must be greater than zero.");
+                return;
+              }
+              if (dailySavings > 0) {
+                const daysAdded = Math.ceil(analyzedPrice / dailySavings);
+                setAnalysisResult(daysAdded === 1 ? '1 day' : `${daysAdded} days`);
+              } else {
+                setAnalysisResult('Unable to estimate without savings data.');
+              }
+            }}
+            variant="secondary"
+            className="shrink-0 px-2 w-full sm:w-auto"
+          >
+            Analyze
+          </Button>
+        </div>
 
         {analysisResult && (
           <div className="mt-4 p-4 bg-background rounded-xl text-center transition-all duration-300">
-            {analyzedPrice !== null && analyzedPrice > 0 ? (
+            {analyzedPrice !== null && analyzedPrice > 0 && analysisResult !== 'Unable to estimate without savings data.' ? (
               <>
                 <p className="text-xs sm:text-sm text-text-secondary">
-                  This <span className="font-bold text-text-primary">${analyzedPrice.toFixed(2)}</span> purchase would delay your goal by:
+                  This <span className="font-bold text-text-primary">${Number(analyzedPrice).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span> purchase would delay your goal by:
                 </p>
-                <p className="text-xl sm:text-2xl font-bold text-primary mt-1">{analysisResult}</p>
+                <p className="text-xl sm:text-2xl font-bold text-red-600 mt-1">
+                  {(() => {
+                    const days = typeof analysisResult === 'string' ? parseInt(analysisResult, 10) : NaN;
+                    if (!Number.isNaN(days) && days > 60) {
+                      const months = Math.ceil(days / 30);
+                      return `${months} month${months === 1 ? '' : 's'}`;
+                    }
+                    return analysisResult;
+                  })()}
+                </p>
               </>
             ) : (
               <p className="text-sm font-medium text-text-primary">{analysisResult}</p>
@@ -264,7 +283,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, criteria, setActivePage,
         )}
       </Card>
 
-      <Card className="border border-primary/30">
+      <Card>
         <h2 className="text-lg sm:text-xl font-bold text-text-primary mb-4 flex items-center">
           AI-Powered Suggestions <Icon name="sparkles" className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
         </h2>
