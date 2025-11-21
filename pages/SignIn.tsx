@@ -34,7 +34,7 @@ const SignIn: React.FC<SignInProps> = ({ onSuccess, onSwitch }) => {
   };
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-6">
+    <div className="mx-auto flex min-h-screen max-w-md flex-col justify-start px-4 pt-4 pb-8">
       <div className="text-center">
         <div className="mx-auto flex h-60 w-60 sm:h-64 sm:w-64 items-center justify-center -mb-16">
           <img src={logo} alt="Days-to" className="block h-full w-full object-contain" />
