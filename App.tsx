@@ -40,6 +40,14 @@ const App: React.FC = () => {
   const [interestRate, setInterestRate] = useState(6.5);
   const [loanTerm, setLoanTerm] = useState(30);
 
+  const wrapContent = (content: React.ReactNode) => (
+    <div className="min-h-screen flex justify-center">
+      <div className="w-full max-w-3xl bg-background p-4 sm:p-6">
+        {content}
+      </div>
+    </div>
+  );
+
   useEffect(() => {
     if (!criteria.autoEstimate) return;
     
@@ -81,15 +89,18 @@ const App: React.FC = () => {
 
     switch (activePage) {
       case Page.Dashboard:
-        return <Dashboard 
-                  profile={profile} 
-                  criteria={criteria} 
-                  setActivePage={setActivePage} 
-                  interestRate={interestRate} 
-                  loanTerm={loanTerm} 
-                />;
+        return wrapContent(
+          <Dashboard 
+            profile={profile} 
+            criteria={criteria} 
+            setActivePage={setActivePage} 
+            interestRate={interestRate} 
+            loanTerm={loanTerm} 
+          />
+        );
       case Page.Profile:
-        return <Profile 
+        return wrapContent(
+          <Profile 
             profile={profile} 
             setProfile={setProfile} 
             bankAnalysis={bankAnalysis} 
@@ -97,15 +108,16 @@ const App: React.FC = () => {
             criteria={criteria}
             setCriteria={setCriteria}
             setActivePage={setActivePage}
-        />;
+          />
+        );
       case Page.Learning:
-        return <Learning />;
+        return wrapContent(<Learning />);
       case Page.Simulator:
-        return <Simulator profile={profile} criteria={criteria}/>;
+        return wrapContent(<Simulator profile={profile} criteria={criteria}/>);
       case Page.Insights:
-        return <Insights profile={profile} />;
+        return wrapContent(<Insights profile={profile} />);
       case Page.FinancialReport:
-        return (
+        return wrapContent(
           <FinancialReport
             bankAnalysis={bankAnalysis}
             profile={profile}
@@ -113,23 +125,27 @@ const App: React.FC = () => {
           />
         );
       case Page.Settings:
-        return <Settings 
-                  criteria={criteria}
-                  setCriteria={setCriteria}
-                  interestRate={interestRate}
-                  setInterestRate={setInterestRate}
-                  loanTerm={loanTerm}
-                  setLoanTerm={setLoanTerm}
-                  setActivePage={setActivePage}
-                />
+        return wrapContent(
+          <Settings 
+            criteria={criteria}
+            setCriteria={setCriteria}
+            interestRate={interestRate}
+            setInterestRate={setInterestRate}
+            loanTerm={loanTerm}
+            setLoanTerm={setLoanTerm}
+            setActivePage={setActivePage}
+          />
+        );
       default:
-        return <Dashboard 
-                  profile={profile} 
-                  criteria={criteria} 
-                  setActivePage={setActivePage} 
-                  interestRate={interestRate} 
-                  loanTerm={loanTerm}
-                />;
+        return wrapContent(
+          <Dashboard 
+            profile={profile} 
+            criteria={criteria} 
+            setActivePage={setActivePage} 
+            interestRate={interestRate} 
+            loanTerm={loanTerm}
+          />
+        );
     }
   };
 
