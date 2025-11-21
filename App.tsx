@@ -70,11 +70,13 @@ const App: React.FC = () => {
     if (!criteria.autoEstimate) return;
     
     const basePrice = 400000;
-    const price = basePrice + 
-                  (criteria.bedrooms * 50000) + 
-                  (criteria.bathrooms * 25000) + 
-                  (criteria.garage ? 20000 : 0) + 
-                  (criteria.location.length > 0 ? 15000: 0);
+    const price = Math.round(
+      basePrice +
+      (criteria.bedrooms * 50000) +
+      (criteria.bathrooms * 25000) +
+      (criteria.garage ? 20000 : 0) +
+      (criteria.location.length > 0 ? 15000 : 0)
+    );
     
     if (criteria.estimatedPrice !== price) {
         setCriteria(c => ({...c, estimatedPrice: price}));

@@ -93,13 +93,13 @@ const Profile: React.FC<ProfileProps> = ({ profile, setProfile, bankAnalysis, se
       // Simulate analysis
       setTimeout(() => {
         setBankAnalysis({
-          monthlyAverageSpend: 2850.75,
-          monthlyAverageSavings: 1149.25,
+          monthlyAverageSpend: Math.round(2850.75),
+          monthlyAverageSavings: Math.round(1149.25),
           recurringExpenses: [
-            { name: 'Netflix', averageAmount: 15.99, category: 'Subscriptions', macroCategory: 'Lifestyle', transactionCount: 3, monthCount: 3, estimatedMonthlyCost: 15.99 },
-            { name: 'Gym', averageAmount: 40.0, category: 'Utilities', macroCategory: 'Essential', transactionCount: 3, monthCount: 3, estimatedMonthlyCost: 40.0 },
-            { name: 'Utilities', averageAmount: 120.0, category: 'Utilities', macroCategory: 'Essential', transactionCount: 3, monthCount: 3, estimatedMonthlyCost: 120.0 },
-            { name: 'Rent', averageAmount: 1500.0, category: 'Rent', macroCategory: 'Essential', transactionCount: 3, monthCount: 3, estimatedMonthlyCost: 1500.0 },
+            { name: 'Netflix', averageAmount: Math.round(15.99), category: 'Subscriptions', macroCategory: 'Lifestyle', transactionCount: 3, monthCount: 3, estimatedMonthlyCost: Math.round(15.99) },
+            { name: 'Gym', averageAmount: Math.round(40.0), category: 'Utilities', macroCategory: 'Essential', transactionCount: 3, monthCount: 3, estimatedMonthlyCost: Math.round(40.0) },
+            { name: 'Utilities', averageAmount: Math.round(120.0), category: 'Utilities', macroCategory: 'Essential', transactionCount: 3, monthCount: 3, estimatedMonthlyCost: Math.round(120.0) },
+            { name: 'Rent', averageAmount: Math.round(1500.0), category: 'Rent', macroCategory: 'Essential', transactionCount: 3, monthCount: 3, estimatedMonthlyCost: Math.round(1500.0) },
           ],
           monthlyBreakdown: [],
           incomeSources: [],
@@ -235,11 +235,11 @@ const Profile: React.FC<ProfileProps> = ({ profile, setProfile, bankAnalysis, se
             <div className="space-y-4">
                 <div className="flex justify-between items-center p-4 bg-light-gray rounded-xl">
                     <span className="font-medium text-text-secondary">Avg. Monthly Savings</span>
-                    <span className="font-bold text-lg text-green-600">${bankAnalysis.monthlyAverageSavings.toFixed(2)}</span>
+                    <span className="font-bold text-lg text-green-600">${Math.round(bankAnalysis.monthlyAverageSavings).toLocaleString()}</span>
                 </div>
                  <div className="flex justify-between items-center p-4 bg-light-gray rounded-xl">
                     <span className="font-medium text-text-secondary">Avg. Monthly Spend</span>
-                    <span className="font-bold text-lg text-red-500">${bankAnalysis.monthlyAverageSpend.toFixed(2)}</span>
+                    <span className="font-bold text-lg text-red-500">${Math.round(bankAnalysis.monthlyAverageSpend).toLocaleString()}</span>
                 </div>
                 
                 <div className="pt-4">

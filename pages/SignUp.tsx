@@ -37,8 +37,9 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
 
   const [jobTitle, setJobTitle] = useState('');
   const [employmentType, setEmploymentType] = useState(employmentTypes[0]);
-  const [annualSalary, setAnnualSalary] = useState(85000);
-  const [monthlyIncome, setMonthlyIncome] = useState(annualSalary / 12);
+  const [annualSalary, setAnnualSalary] = useState<number | null>(null);
+  const [weeklyIncome, setWeeklyIncome] = useState<number | null>(null);
+  const [monthlyIncome, setMonthlyIncome] = useState<number | null>(null);
   const [skills, setSkills] = useState<string[]>([]);
   const [hobbyInput, setHobbyInput] = useState('');
   const [hobbies, setHobbies] = useState<string[]>([]);
@@ -50,7 +51,7 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
   const [totalBalance, setTotalBalance] = useState('');
 
   const [isFirstHomeBuyer, setIsFirstHomeBuyer] = useState(true);
-  const [homePrice, setHomePrice] = useState(550000);
+  const [homePrice, setHomePrice] = useState<number | null>(null);
   const [autoPrice, setAutoPrice] = useState(false);
   const [location, setLocation] = useState('');
   const [bedrooms, setBedrooms] = useState(3);
@@ -61,14 +62,69 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
 
-  const syncFromAnnual = (value: number) => {
-    setAnnualSalary(value);
-    setMonthlyIncome(Number((value / 12).toFixed(2)));
+  const formatNumberInput = (value: number | null) =>
+    value !== null && !Number.isNaN(value) ? value.toLocaleString() : '';
+
+  const parseNumberInput = (value: string): number | null => {
+    const cleaned = value.replace(/[^0-9]/g, '');
+    if (!cleaned) return null;
+    return Math.round(Number(cleaned));
   };
 
-  const syncFromMonthly = (value: number) => {
+  const handleUseDemoData = async () => {
+    try {
+      const demoPaths = [
+        '/assets/demodata/SpendAccount-6094_2025-08.csv',
+        '/assets/demodata/SpendAccount-6094_2025-09.csv',
+        '/assets/demodata/SpendAccount-6094_2025-10.csv',
+      ];
+      // Fetch as blobs to mimic File objects
+      const fetched = await Promise.all(
+        demoPaths.map(async (path) => {
+          const res = await fetch(path);
+          const blob = await res.blob();
+          return new File([blob], path.split('/').pop() || 'statement.csv', { type: 'text/csv' });
+        })
+      );
+
+      setBankStatements(fetched.map((file) => ({ fileName: file.name })));
+      setStatementFiles(fetched);
+      await analyzeIfReady(fetched, jobTitle, employmentType);
+    } catch (err) {
+      console.error('Demo data load failed', err);
+      setError('Unable to load demo data right now. Please try uploading manually.');
+    }
+  };
+
+  const syncFromAnnual = (value: number | null) => {
+    setAnnualSalary(value);
+    if (value === null || Number.isNaN(value)) {
+      setMonthlyIncome(null);
+      setWeeklyIncome(null);
+    } else {
+      setMonthlyIncome(Math.round(value / 12));
+      setWeeklyIncome(Math.round(value / 52));
+    }
+  };
+
+  const syncFromMonthly = (value: number | null) => {
     setMonthlyIncome(value);
-    setAnnualSalary(Number((value * 12).toFixed(2)));
+    if (value === null || Number.isNaN(value)) {
+      setAnnualSalary(null);
+    } else {
+      setAnnualSalary(Math.round(value * 12));
+    }
+  };
+
+  const syncFromWeekly = (value: number | null) => {
+    setWeeklyIncome(value);
+    if (value === null || Number.isNaN(value)) {
+      setMonthlyIncome(null);
+      setAnnualSalary(null);
+    } else {
+      setMonthlyIncome(Math.round((value * 52) / 12));
+      setAnnualSalary(Math.round(value * 52));
+    }
   };
 
   const handleAddHobby = () => {
@@ -218,11 +274,20 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
     setIsLoading(true);
     setError('');
     try {
+      const derivedMonthly =
+        monthlyIncome ??
+        (weeklyIncome !== null ? Math.round((weeklyIncome * 52) / 12) : null) ??
+        (annualSalary !== null ? Math.round(annualSalary / 12) : 0);
+      const derivedAnnual =
+        annualSalary ??
+        (weeklyIncome !== null ? Math.round(weeklyIncome * 52) : null) ??
+        (monthlyIncome !== null ? Math.round(monthlyIncome * 12) : 0);
+
       const profile: UserProfile = {
         jobTitle: jobTitle.trim(),
         jobType: employmentToJobType[employmentType] || 'Salary',
-        annualIncome: annualSalary,
-        monthlyIncome,
+        annualIncome: derivedAnnual ?? 0,
+        monthlyIncome: derivedMonthly ?? 0,
         hobbies,
         skills,
       };
@@ -234,7 +299,7 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
         garage,
         propertyType: 'House',
         isFirstHomeBuyer,
-        estimatedPrice: homePrice,
+        estimatedPrice: homePrice ?? 0,
         autoEstimate: autoPrice,
       };
 
@@ -245,7 +310,7 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
         profile,
         criteria,
         bankAnalysis: analysisResult,
-        totalBalance: Number(totalBalance),
+        totalBalance: Number(totalBalance || 0),
       });
       onSuccess(user);
     } catch (err) {
@@ -342,7 +407,16 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
           <select
             className={inputClasses}
             value={employmentType}
-            onChange={(e) => setEmploymentType(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              setEmploymentType(next);
+              if (next === 'Full-time') {
+                setWeeklyIncome(null);
+              } else {
+                setAnnualSalary(null);
+                setMonthlyIncome(null);
+              }
+            }}
             aria-label="Employment Type"
           >
             {employmentTypes.map(type => (
@@ -352,26 +426,39 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
         </div>
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 mt-4">
-        <div>
-          <input
-            type="number"
-            className={inputClasses}
-            aria-label="Annual Salary ($)"
-            value={annualSalary}
-            onChange={(e) => syncFromAnnual(Number(e.target.value))}
-            placeholder="Annual Salary ($)"
-          />
-        </div>
-        <div>
-          <input
-            type="number"
-            className={inputClasses}
-            aria-label="Monthly Income ($)"
-            value={monthlyIncome}
-            onChange={(e) => syncFromMonthly(Number(e.target.value))}
-            placeholder="Monthly Income ($)"
-          />
-        </div>
+        {employmentType === 'Full-time' ? (
+          <>
+            <div className="md:col-span-2">
+              <input
+                type="text"
+                className={inputClasses}
+                aria-label="Annual Salary ($)"
+                value={formatNumberInput(annualSalary)}
+                onChange={(e) => {
+                  const parsed = parseNumberInput(e.target.value);
+                  syncFromAnnual(parsed);
+                }}
+                placeholder="Annual Salary ($)"
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="md:col-span-2">
+              <input
+                type="text"
+                className={inputClasses}
+                aria-label="Weekly Income ($)"
+                value={formatNumberInput(weeklyIncome)}
+                onChange={(e) => {
+                  const parsed = parseNumberInput(e.target.value);
+                  syncFromWeekly(parsed);
+                }}
+                placeholder="Weekly Income ($)"
+              />
+            </div>
+          </>
+        )}
       </div>
       <div className="mt-4 space-y-3">
         <div>
@@ -387,86 +474,101 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
             />
             <Button variant="secondary" onClick={handleAddHobby}>Add</Button>
           </div>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {hobbies.map((hobby) => (
-              <span key={hobby} className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">{hobby}</span>
-            ))}
-          </div>
-        </div>
-        <div>
-          <Button
-            variant="secondary"
-            onClick={handleGenerateSkills}
-            disabled={!jobTitle.trim()}
-          >
-            Generate skills with AI placeholder <Icon name="sparkles" className="ml-2 h-4 w-4" />
-          </Button>
-          {skills.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {skills.map(skill => (
-                <span key={skill} className="rounded-full bg-gray-200 px-3 py-1 text-sm text-gray-700">{skill}</span>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {hobbies.map((hobby) => (
+                <span key={hobby} className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">{hobby}</span>
               ))}
             </div>
-          )}
         </div>
       </div>
     </Card>
   );
 
   const renderBankStep = () => (
-      <Card>
-        <h2 className="text-lg font-semibold text-text-primary mb-3">Bank Statements</h2>
-        <p className="text-sm text-text-secondary">Upload three consecutive months (CSV). We'll analyze cash flow.</p>
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {[0, 1, 2].map((idx) => (
-          <div key={idx} className="flex flex-col gap-2 rounded-xl border border-dashed border-gray-300 bg-light-gray/40 p-3">
-            <label className="text-xs font-semibold text-text-secondary">Month {idx + 1}</label>
-            <input
-              type="file"
-              accept=".csv"
-              className="text-xs"
-              onChange={handleBankUpload(idx)}
-            />
-            <span className="text-xs text-text-primary break-all">
-              {bankStatements[idx]?.fileName || 'No file chosen'}
-            </span>
-          </div>
-        ))}
-      </div>
-      <div className="mt-4 grid grid-cols-2 gap-4">
-        <div>
+    <Card>
+      <h2 className="text-lg font-semibold text-text-primary mb-3">Bank Statements & Balance</h2>
+      <p className="text-sm text-text-secondary">
+        Upload separate CSV exports for the past three months. We’ll analyze them to personalize your insights.
+      </p>
+      <div className="mt-4 space-y-4">
+        <div className="rounded-2xl border border-gray-200 p-4">
+          <p className="text-xs text-text-secondary mb-2">
+            Enter the total amount you have saved today. We’ll use it to personalize your deposit timeline.
+          </p>
           <input
-            type="number"
+            type="text"
             className={inputClasses}
             aria-label="Total Balance ($)"
-            value={totalBalance}
-            onChange={(e) => setTotalBalance(e.target.value)}
+            value={formatNumberInput(totalBalance === '' ? null : Number(totalBalance))}
+            onChange={(e) => {
+              const parsed = parseNumberInput(e.target.value);
+              setTotalBalance(parsed === null ? '' : String(parsed));
+            }}
             placeholder="Total Balance ($)"
           />
         </div>
-        <div className="flex items-end">
-          <p className="text-xs text-text-secondary">
-            We'll use this to personalise your current savings and ETA.
-          </p>
-        </div>
+
+        {['Month 1', 'Month 2', 'Month 3'].map((label, index) => {
+          const summary = bankStatements[index];
+          return (
+            <div key={label} className="rounded-2xl border border-dashed border-gray-300 p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-text-primary">{label}</p>
+                  <p className="text-xs text-text-secondary">
+                    {summary ? summary.fileName : 'Upload a CSV or PDF statement exported from your bank'}
+                  </p>
+                </div>
+                <div>
+                  <input
+                    type="file"
+                    id={`bank-upload-${index}`}
+                    accept=".csv,.pdf"
+                    className="hidden"
+                    onChange={handleBankUpload(index)}
+                  />
+                  <label
+                    htmlFor={`bank-upload-${index}`}
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    <Icon name="upload" className="h-4 w-4" />
+                    {summary ? 'Replace File' : 'Upload File'}
+                  </label>
+                </div>
+              </div>
+              {summary ? (
+                <p className="mt-4 text-sm font-semibold text-green-600">Upload complete ✓</p>
+              ) : (
+                <p className="mt-4 text-xs text-text-secondary italic">Awaiting upload...</p>
+              )}
+            </div>
+          );
+        })}
+
+        {isAnalyzingStatements && (
+          <p className="text-sm text-text-secondary italic">Crunching the numbers…</p>
+        )}
+        {!isAnalyzingStatements && analysisResult && (
+          <p className="text-sm font-semibold text-green-600">Analysis complete – ready for the next step!</p>
+        )}
+
+        {analysisResult && (
+          <div className="grid grid-cols-2 gap-3 rounded-2xl bg-light-gray/60 p-3 text-sm text-text-primary">
+            <div>
+              <p className="text-xs text-text-secondary">Avg Monthly Spend</p>
+              <p className="font-semibold">
+                ${analysisResult.monthlyAverageSpend.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-text-secondary">Avg Monthly Savings</p>
+              <p className="font-semibold text-green-600">
+                ${analysisResult.monthlyAverageSavings.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
-      {isAnalyzingStatements && (
-        <div className="mt-4 rounded-xl bg-light-gray/80 px-4 py-3 text-sm text-text-secondary">
-          Analyzing statements...
-        </div>
-      )}
-      {analysisResult && (
-        <div className="mt-4 grid grid-cols-2 gap-3 rounded-2xl bg-light-gray/60 p-3 text-sm text-text-primary">
-          <div>
-            <p className="text-xs text-text-secondary">Avg Monthly Spend</p>
-            <p className="font-semibold">${analysisResult.monthlyAverageSpend.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-          </div>
-          <div>
-            <p className="text-xs text-text-secondary">Avg Monthly Savings</p>
-            <p className="font-semibold text-green-600">${analysisResult.monthlyAverageSavings.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-          </div>
-        </div>
-      )}
     </Card>
   );
 
@@ -492,9 +594,10 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
         <input
           type="number"
           className={inputClasses}
-          value={homePrice}
+          value={homePrice ?? ''}
           onChange={(e) => {
-            setHomePrice(Number(e.target.value));
+            const val = e.target.value;
+            setHomePrice(val === '' ? null : Number(val));
             setAutoPrice(false);
           }}
           disabled={autoPrice}
@@ -633,23 +736,30 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
             {error}
           </div>
         )}
-        <div className="mt-4 flex items-center justify-between gap-3">
-          {currentStep > 0 ? (
-            <Button variant="secondary" onClick={handlePrevStep} className="flex-1">
-              Back
-            </Button>
-          ) : (
-            <span />
-          )}
-          {isLastStep ? (
-            <Button className="flex-1" onClick={handleSubmit} isLoading={isLoading}>
-              Create Account
-            </Button>
-          ) : (
-            <Button className="flex-1" onClick={handleNextStep}>
-              Next
+        <div className="mt-4 space-y-3">
+          {currentStep === 2 && (
+            <Button variant="secondary" onClick={handleUseDemoData} className="w-full">
+              Use demo data
             </Button>
           )}
+          <div className="flex items-center justify-between gap-3">
+            {currentStep > 0 ? (
+              <Button variant="secondary" onClick={handlePrevStep} className="flex-1">
+                Back
+              </Button>
+            ) : (
+              <span />
+            )}
+            {isLastStep ? (
+              <Button className="flex-1" onClick={handleSubmit} isLoading={isLoading}>
+                Create Account
+              </Button>
+            ) : (
+              <Button className="flex-1" onClick={handleNextStep}>
+                Next
+              </Button>
+            )}
+          </div>
         </div>
       </Card>
 

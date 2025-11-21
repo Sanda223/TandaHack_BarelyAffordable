@@ -16,7 +16,7 @@ const colorPalette = ['#00C0A3', '#5EEAD4', '#FBBF24', '#FB7185', '#818CF8'];
 const FinancialReport: React.FC<FinancialReportProps> = ({ bankAnalysis, profile, setActivePage }) => {
   const recurringExpenses = bankAnalysis?.recurringExpenses ?? [];
   const recurringAmount = (item: (typeof recurringExpenses)[number]) =>
-    item.estimatedMonthlyCost ?? item.averageAmount ?? (item as any).amount ?? 0;
+    Math.round(item.estimatedMonthlyCost ?? item.averageAmount ?? (item as any).amount ?? 0);
 
   const totalRecurring = useMemo(() => {
     if (!bankAnalysis) return 0;
@@ -91,11 +91,11 @@ const FinancialReport: React.FC<FinancialReportProps> = ({ bankAnalysis, profile
       <div className="grid grid-cols-2 gap-4">
         <Card>
           <p className="text-xs uppercase tracking-wide text-text-secondary">Avg Monthly Spend</p>
-          <p className="text-2xl font-bold text-text-primary mt-1">${bankAnalysis.monthlyAverageSpend.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-text-primary mt-1">${Math.round(bankAnalysis.monthlyAverageSpend).toLocaleString()}</p>
         </Card>
         <Card>
           <p className="text-xs uppercase tracking-wide text-text-secondary">Avg Monthly Savings</p>
-          <p className="text-2xl font-bold text-primary mt-1">${bankAnalysis.monthlyAverageSavings.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-primary mt-1">${Math.round(bankAnalysis.monthlyAverageSavings).toLocaleString()}</p>
         </Card>
         <Card>
           <p className="text-xs uppercase tracking-wide text-text-secondary">Savings Rate</p>

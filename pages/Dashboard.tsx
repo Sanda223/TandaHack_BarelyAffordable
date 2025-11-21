@@ -261,13 +261,13 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, criteria, setActivePage,
           {incomeOpportunities.slice(0, 2).map((opp, i) => (
             <SuggestionCard
               key={`income-${i}`} title={opp.title} description={opp.description}
-              value={`+$${opp.estimatedIncome}/mo`} icon="lightbulb"
+              value={`+$${Number(opp.estimatedIncome || 0).toLocaleString()}/mo`} icon="lightbulb"
             />
           ))}
           {spendingSuggestions.slice(0, 2).map((sugg, i) => (
             <SuggestionCard
               key={`spend-${i}`} title={sugg.title} description={sugg.description}
-              value={`-$${sugg.potentialSavings}/mo`} icon="cash"
+              value={`-$${Number(sugg.potentialSavings || 0).toLocaleString()}/mo`} icon="cash"
             />
           ))}
         </div>
