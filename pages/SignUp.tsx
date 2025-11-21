@@ -74,9 +74,9 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
   const handleUseDemoData = async () => {
     try {
       const demoPaths = [
-        '/assets/demodata/SpendAccount-6094_2025-08.csv',
-        '/assets/demodata/SpendAccount-6094_2025-09.csv',
-        '/assets/demodata/SpendAccount-6094_2025-10.csv',
+        '/demodata-SpendAccount-6094_2025-08.csv',
+        '/demodata-SpendAccount-6094_2025-09.csv',
+        '/demodata-SpendAccount-6094_2025-10.csv',
       ];
       // Fetch as blobs to mimic File objects
       const fetched = await Promise.all(
