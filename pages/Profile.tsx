@@ -4,7 +4,8 @@ import Card from '../components/Card';
 import Icon from '../components/Icon';
 import Button from '../components/Button';
 import logo from '../assets/logo.png';
-import { suggestSkills, shortenExpenseNames } from '../services/geminiService';
+import { suggestSkillsAndJobsFromHobbies, shortenExpenseNames } from '../services/geminiService';
+import { updateSupabaseUser } from '../services/supabaseAuth';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface ProfileProps {
@@ -17,6 +18,8 @@ interface ProfileProps {
   setActivePage: (page: Page) => void;
   onSignOut?: () => void;
   fullName?: string;
+  userId: string | null;
+  totalBalance: number;
 }
 
 const inputClasses = 'w-full p-3 bg-white border rounded-xl border-gray-300 shadow-sm text-sm focus:border-primary focus:ring-1 focus:ring-primary';
@@ -38,10 +41,13 @@ const Section: React.FC<{ title: string; icon: React.ComponentProps<typeof Icon>
   </Card>
 );
 
-const Profile: React.FC<ProfileProps> = ({ profile, setProfile, bankAnalysis, setBankAnalysis, criteria, setCriteria, setActivePage, onSignOut, fullName }) => {
+const Profile: React.FC<ProfileProps> = ({ profile, setProfile, bankAnalysis, setBankAnalysis, criteria, setCriteria, setActivePage, onSignOut, fullName, userId, totalBalance }) => {
   const [newHobby, setNewHobby] = useState('');
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
   const [shortExpenseNames, setShortExpenseNames] = useState<Record<string, string>>({});
+  const [suggestedJobs, setSuggestedJobs] = useState<string[]>([]);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updateMessage, setUpdateMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -120,12 +126,40 @@ const Profile: React.FC<ProfileProps> = ({ profile, setProfile, bankAnalysis, se
   };
 
   const handleGetSkillSuggestions = useCallback(async () => {
-    if (!profile.jobTitle || profile.hobbies.length === 0) return;
+    if (profile.hobbies.length === 0) return;
     setIsLoadingSkills(true);
-    const skills = await suggestSkills(profile.jobTitle, profile.hobbies);
+    const { skills, jobs } = await suggestSkillsAndJobsFromHobbies(profile.hobbies);
     setProfile((prev) => ({ ...prev, skills: [...new Set([...prev.skills, ...skills])] }));
+    setSuggestedJobs(jobs);
     setIsLoadingSkills(false);
-  }, [profile.jobTitle, profile.hobbies, setProfile]);
+  }, [profile.hobbies, setProfile]);
+
+  const handleUpdateProfile = async () => {
+    if (!userId) {
+      setUpdateMessage({ type: 'error', text: 'User not authenticated' });
+      return;
+    }
+
+    setIsUpdating(true);
+    setUpdateMessage(null);
+
+    try {
+      await updateSupabaseUser({
+        userId,
+        profile,
+        criteria,
+        bankAnalysis,
+        totalBalance,
+      });
+      setUpdateMessage({ type: 'success', text: 'Profile updated successfully!' });
+      setTimeout(() => setUpdateMessage(null), 3000);
+    } catch (error) {
+      console.error('Update error:', error);
+      setUpdateMessage({ type: 'error', text: 'Failed to update profile. Please try again.' });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const depositGoal = criteria.estimatedPrice * (criteria.isFirstHomeBuyer ? 0.05 : 0.2);
 
@@ -186,7 +220,7 @@ const Profile: React.FC<ProfileProps> = ({ profile, setProfile, bankAnalysis, se
       </div>
 
       <div className="pt-[4rem] space-y-6">
-        <Card aria-hidden className="-h-10 p-0 bg-transparent border-transparent shadow-none" />
+        <div aria-hidden className="h-10" />
         <header>
           <h1 className="text-3xl font-bold  text-text-primary">{possessiveName ? `${possessiveName} Profile` : 'Your Profile'}</h1>
           <p className="text-text-secondary mt-1">
@@ -230,8 +264,8 @@ const Profile: React.FC<ProfileProps> = ({ profile, setProfile, bankAnalysis, se
             </div>
           </InputField>
           <InputField label="Your Skills">
-            <Button onClick={handleGetSkillSuggestions} isLoading={isLoadingSkills} disabled={!profile.jobTitle || profile.hobbies.length === 0}>
-              Suggest Skills with AI <Icon name="sparkles" className="w-4 h-4 ml-2" />
+            <Button onClick={handleGetSkillSuggestions} isLoading={isLoadingSkills} disabled={profile.hobbies.length === 0}>
+              Suggest Skills and Career Paths with AI <Icon name="sparkles" className="w-4 h-4 ml-2" />
             </Button>
             <div className="flex flex-wrap gap-2 mt-3">
               {profile.skills.map((skill) => (
@@ -241,6 +275,17 @@ const Profile: React.FC<ProfileProps> = ({ profile, setProfile, bankAnalysis, se
               ))}
             </div>
           </InputField>
+          {suggestedJobs.length > 0 && (
+            <InputField label="Suggested Career Paths">
+              <div className="flex flex-wrap gap-2">
+                {suggestedJobs.map((job) => (
+                  <span key={job} className="bg-accent/10 text-accent text-sm font-medium px-3 py-1.5 rounded-full">
+                    {job}
+                  </span>
+                ))}
+              </div>
+            </InputField>
+          )}
         </Section>
 
         <Section title="Financial Snapshot" icon="chart-bar">
@@ -332,14 +377,27 @@ const Profile: React.FC<ProfileProps> = ({ profile, setProfile, bankAnalysis, se
             </Button>
           </div>
         </Card>
-        {onSignOut && (
-          <div className="pt-4">
+
+        {updateMessage && (
+          <Card className={`${updateMessage.type === 'success' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+            <p className={`text-center font-medium ${updateMessage.type === 'success' ? 'text-green-800' : 'text-red-800'}`}>
+              {updateMessage.text}
+            </p>
+          </Card>
+        )}
+
+        <div className="pt-4 space-y-3">
+          <Button onClick={handleUpdateProfile} isLoading={isUpdating} className="w-full justify-center">
+            <Icon name="check" className="w-4 h-4 mr-2" />
+            Update Profile
+          </Button>
+          {onSignOut && (
             <Button onClick={onSignOut} variant="secondary" className="w-full justify-center">
               <Icon name="arrow-right" className="w-4 h-4 rotate-180" />
               Sign out
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

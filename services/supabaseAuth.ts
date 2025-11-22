@@ -343,3 +343,102 @@ export const getCurrentSupabaseUser = async (): Promise<PublicUser | null> => {
     createdAt: user.created_at,
   };
 };
+
+interface UpdateUserPayload {
+  userId: string;
+  profile: UserProfile;
+  criteria: HomeCriteria;
+  bankAnalysis: BankStatementAnalysis | null;
+  totalBalance: number;
+}
+
+export const updateSupabaseUser = async (payload: UpdateUserPayload): Promise<void> => {
+  const { userId, profile, criteria, bankAnalysis, totalBalance } = payload;
+
+  // Determine employment status and income frequency
+  const employmentStatus = profile.jobType === 'Salary' ? 'fulltime' :
+                          profile.jobType === 'Hourly' ? 'parttime' :
+                          profile.jobType === 'Casual' ? 'casual' :
+                          profile.jobType === 'Contract' ? 'contract' : 'fulltime';
+  
+  const incomeFrequency = employmentStatus === 'fulltime' ? 'yearly' : 'weekly';
+  const incomeAmount = employmentStatus === 'fulltime'
+    ? profile.annualIncome
+    : Math.round(profile.monthlyIncome * 12 / 52);
+
+  // Calculate average spending from bank analysis
+  const avgTotalMonthlySpend = bankAnalysis?.monthlyAverageSpend || 0;
+  
+  // Map expense categories from bank analysis
+  const expenseByMacro = bankAnalysis?.expenseByMacro || [];
+  const getMacroSpend = (macro: string) => {
+    const found = expenseByMacro.find(e => e.macroCategory.toLowerCase() === macro.toLowerCase());
+    return found?.averageMonthlySpend || 0;
+  };
+
+  const avgHousingSpend = getMacroSpend('Housing');
+  const avgTransportSpend = getMacroSpend('Transport');
+  const avgFoodSpend = getMacroSpend('Food & Dining');
+  const avgUtilitiesSpend = getMacroSpend('Utilities');
+  const avgEntertainmentSpend = getMacroSpend('Entertainment');
+  const avgHealthcareSpend = getMacroSpend('Healthcare');
+  const avgSubscriptionsSpend = getMacroSpend('Subscriptions');
+  
+  const categorizedTotal = avgHousingSpend + avgTransportSpend + avgFoodSpend +
+                          avgUtilitiesSpend + avgEntertainmentSpend + avgHealthcareSpend +
+                          avgSubscriptionsSpend;
+  const avgOtherSpend = Math.max(0, avgTotalMonthlySpend - categorizedTotal);
+
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({
+        updatedAt: new Date().toISOString(),
+        
+        // Employment & Income
+        employmentStatus: employmentStatus,
+        incomeAmount: incomeAmount,
+        incomeFrequency: incomeFrequency,
+        
+        // Savings
+        currentSavings: totalBalance,
+        savingsGoal: criteria.estimatedPrice ? criteria.estimatedPrice * 0.2 : null,
+        monthlyTarget: bankAnalysis?.monthlyAverageSavings || 0,
+        
+        // Property Goals
+        targetPropertyCity: criteria.location,
+        targetPropertyBedrooms: criteria.bedrooms,
+        targetPropertyBathrooms: criteria.bathrooms,
+        targetPropertyGarage: criteria.garage,
+        estimatedPropertyPrice: criteria.estimatedPrice,
+        depositTarget: criteria.estimatedPrice ? criteria.estimatedPrice * 0.2 : null,
+        
+        // Average Spending
+        avgTotalMonthlySpend: avgTotalMonthlySpend,
+        avgHousingSpend: avgHousingSpend,
+        avgTransportSpend: avgTransportSpend,
+        avgFoodSpend: avgFoodSpend,
+        avgUtilitiesSpend: avgUtilitiesSpend,
+        avgEntertainmentSpend: avgEntertainmentSpend,
+        avgHealthcareSpend: avgHealthcareSpend,
+        avgSubscriptionsSpend: avgSubscriptionsSpend,
+        avgOtherSpend: avgOtherSpend,
+        
+        // Hobbies
+        hobbies: profile.hobbies || [],
+        
+        // Bank Analysis Metadata
+        lastCsvAnalysisDate: bankAnalysis ? new Date().toISOString() : null,
+        csvMonthsAnalyzed: bankAnalysis ? bankAnalysis.monthsCovered.length : 0,
+        
+        // Current Balance
+        currentBalance: totalBalance,
+      })
+      .eq('id', userId);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error updating user:', error);
+    throw new Error('Failed to update profile');
+  }
+};

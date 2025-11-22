@@ -44,6 +44,48 @@ export const suggestSkills = async (jobTitle: string, hobbies: string[]): Promis
   }
 };
 
+export const suggestSkillsAndJobsFromHobbies = async (hobbies: string[]): Promise<{ skills: string[], jobs: string[] }> => {
+  const ai = getAi();
+  if (!ai) {
+    return new Promise(resolve => setTimeout(() => resolve({
+      skills: ['Project Management', 'Data Analysis', 'Creative Writing', 'Graphic Design', 'Public Speaking'],
+      jobs: ['Freelance Writer', 'Graphic Designer', 'Social Media Manager', 'Content Creator', 'Marketing Consultant']
+    }), 1000));
+  }
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: `Based on these hobbies: ${hobbies.join(', ')}, suggest 5 professional skills that could be developed from these hobbies, and 5 potential job titles or career paths that align with these hobbies and skills. Focus on practical, marketable skills and realistic job opportunities.`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            skills: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            },
+            jobs: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            }
+          },
+          required: ['skills', 'jobs']
+        }
+      }
+    });
+    const parsed = JSON.parse(response.text);
+    return {
+      skills: parsed.skills || [],
+      jobs: parsed.jobs || []
+    };
+  } catch (error) {
+    console.error("Error suggesting skills and jobs from hobbies:", error);
+    return { skills: [], jobs: [] };
+  }
+};
+
 export const generateIncomeOpportunities = async (skills: string[]) => {
     const ai = getAi();
     if (!ai) {

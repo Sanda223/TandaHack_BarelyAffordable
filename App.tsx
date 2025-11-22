@@ -178,16 +178,18 @@ const App: React.FC = () => {
         );
       case Page.Profile:
         return wrapContent(
-          <Profile 
-            profile={profile} 
-            setProfile={setProfile} 
-            bankAnalysis={bankAnalysis} 
+          <Profile
+            profile={profile}
+            setProfile={setProfile}
+            bankAnalysis={bankAnalysis}
             setBankAnalysis={setBankAnalysis}
             criteria={criteria}
             setCriteria={setCriteria}
             setActivePage={setActivePage}
             fullName={fullName}
             onSignOut={handleSignOut}
+            userId={currentUserId}
+            totalBalance={totalBalance ?? 0}
           />
         );
       case Page.Learning:
