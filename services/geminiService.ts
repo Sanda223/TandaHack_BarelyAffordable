@@ -44,6 +44,48 @@ export const suggestSkills = async (jobTitle: string, hobbies: string[]): Promis
   }
 };
 
+export const suggestSkillsAndJobsFromHobbies = async (hobbies: string[]): Promise<{ skills: string[], jobs: string[] }> => {
+  const ai = getAi();
+  if (!ai) {
+    return new Promise(resolve => setTimeout(() => resolve({
+      skills: ['Project Management', 'Data Analysis', 'Creative Writing', 'Graphic Design', 'Public Speaking'],
+      jobs: ['Freelance Writer', 'Graphic Designer', 'Social Media Manager', 'Content Creator', 'Marketing Consultant']
+    }), 1000));
+  }
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: `Based on these hobbies: ${hobbies.join(', ')}, suggest 5 professional skills that could be developed from these hobbies, and 5 potential job titles or career paths that align with these hobbies and skills. Focus on practical, marketable skills and realistic job opportunities.`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            skills: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            },
+            jobs: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            }
+          },
+          required: ['skills', 'jobs']
+        }
+      }
+    });
+    const parsed = JSON.parse(response.text);
+    return {
+      skills: parsed.skills || [],
+      jobs: parsed.jobs || []
+    };
+  } catch (error) {
+    console.error("Error suggesting skills and jobs from hobbies:", error);
+    return { skills: [], jobs: [] };
+  }
+};
+
 export const generateIncomeOpportunities = async (skills: string[]) => {
     const ai = getAi();
     if (!ai) {
@@ -223,6 +265,108 @@ export const shortenExpenseNames = async (names: string[]): Promise<Record<strin
       acc[name] = name.length > 16 ? `${name.slice(0, 13)}...` : name;
       return acc;
     }, {});
+  }
+};
+
+export const analyzeSpendingCategories = async (spendingData: { category: string; amount: number }[]): Promise<any[]> => {
+  const ai = getAi();
+  if (!ai || spendingData.length === 0) {
+    return Promise.resolve([
+      { title: 'Review Subscriptions', description: 'Cancel unused streaming services and memberships', potentialSavings: 50, category: 'Subscriptions' },
+      { title: 'Meal Planning', description: 'Cook at home more often instead of dining out', potentialSavings: 200, category: 'Food & Dining' },
+      { title: 'Transportation Savings', description: 'Use public transport or carpool when possible', potentialSavings: 100, category: 'Transport' },
+    ]);
+  }
+
+  try {
+    const spendingSummary = spendingData
+      .map(item => `${item.category}: $${item.amount}/month`)
+      .join(', ');
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `Analyze these monthly spending categories and provide 5 specific, actionable recommendations to reduce spending for someone saving for a house deposit in Australia: ${spendingSummary}.
+
+For each recommendation:
+- Focus on the highest spending categories first
+- Provide realistic, practical advice
+- Calculate potential monthly savings
+- Be specific about what actions to take
+
+Return recommendations as JSON array with title, description, potentialSavings (number), and category fields.`,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING },
+              description: { type: Type.STRING },
+              potentialSavings: { type: Type.NUMBER },
+              category: { type: Type.STRING },
+            },
+            required: ['title', 'description', 'potentialSavings', 'category']
+          }
+        }
+      }
+    });
+    return JSON.parse(response.text);
+  } catch (error) {
+    console.error('Error analyzing spending categories:', error);
+    return [];
+  }
+};
+
+export const generateIncomeOpportunitiesFromHobbies = async (hobbies: string[], currentIncome: number): Promise<any[]> => {
+  const ai = getAi();
+  if (!ai || hobbies.length === 0) {
+    return Promise.resolve([
+      { title: 'Freelance Side Gig', description: 'Turn your hobby into a weekend income stream', estimatedIncome: 500, type: 'gig' },
+      { title: 'Skill Development', description: 'Learn new skills to increase your earning potential', estimatedIncome: 300, type: 'upskill' },
+      { title: 'Part-time Consulting', description: 'Offer consulting services in your area of expertise', estimatedIncome: 800, type: 'gig' },
+    ]);
+  }
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `Based on these hobbies: ${hobbies.join(', ')}, and current monthly income of $${currentIncome}, suggest 5 realistic ways to increase income for someone in Australia saving for a house deposit. Include:
+
+1. Gig work opportunities related to their hobbies
+2. Potential career changes or job upgrades
+3. Side businesses they could start
+4. Freelance opportunities
+5. Skill monetization strategies
+
+For each suggestion:
+- Be specific and actionable
+- Estimate realistic monthly income potential
+- Specify the type (gig, career_change, side_business, freelance, or upskill)
+- Focus on Australian market opportunities
+
+Return as JSON array with title, description, estimatedIncome (number), and type fields.`,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING },
+              description: { type: Type.STRING },
+              estimatedIncome: { type: Type.NUMBER },
+              type: { type: Type.STRING },
+            },
+            required: ['title', 'description', 'estimatedIncome', 'type']
+          }
+        }
+      }
+    });
+    return JSON.parse(response.text);
+  } catch (error) {
+    console.error('Error generating income opportunities from hobbies:', error);
+    return [];
   }
 };
 

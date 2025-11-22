@@ -178,16 +178,18 @@ const App: React.FC = () => {
         );
       case Page.Profile:
         return wrapContent(
-          <Profile 
-            profile={profile} 
-            setProfile={setProfile} 
-            bankAnalysis={bankAnalysis} 
+          <Profile
+            profile={profile}
+            setProfile={setProfile}
+            bankAnalysis={bankAnalysis}
             setBankAnalysis={setBankAnalysis}
             criteria={criteria}
             setCriteria={setCriteria}
             setActivePage={setActivePage}
             fullName={fullName}
             onSignOut={handleSignOut}
+            userId={currentUserId}
+            totalBalance={totalBalance ?? 0}
           />
         );
       case Page.Learning:
@@ -195,7 +197,7 @@ const App: React.FC = () => {
       case Page.Simulator:
         return wrapContent(<Simulator profile={profile} criteria={criteria} currentSavings={totalBalance ?? 0}/>);
       case Page.Insights:
-        return wrapContent(<Insights profile={profile} />);
+        return wrapContent(<Insights profile={profile} bankAnalysis={bankAnalysis} />);
       case Page.FinancialReport:
         return wrapContent(
           <FinancialReport
