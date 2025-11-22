@@ -119,16 +119,29 @@ export const generateSpendingSuggestions = async () => {
 };
 
 
-export const generateSimulatorSummary = async (changesSummary: string, originalETA: string, newETA: string): Promise<string> => {
+export const generateSimulatorSummary = async (
+    changesSummary: string,
+    originalETA: string,
+    newETA: string,
+    monthsSaved?: number,
+    daysSaved?: number
+): Promise<string> => {
     const ai = getAi();
     if (!ai) {
-        return Promise.resolve(`🚀 Amazing! By making these adjustments, you've accelerated your journey to homeownership. You're now on track to reach your goal in ${newETA}, shaving off significant time from your original ${originalETA} timeline. Keep up the great work!`);
+        const savedText = monthsSaved && monthsSaved > 0
+            ? `, shaving off ${monthsSaved} month${monthsSaved > 1 ? 's' : ''} (${daysSaved} days)`
+            : '';
+        return Promise.resolve(`🚀 Amazing! By making these adjustments, you've accelerated your journey to homeownership. You're now on track to reach your goal in ${newETA}${savedText}. Keep up the great work!`);
     }
 
     try {
+        const savedInfo = monthsSaved && monthsSaved > 0
+            ? ` This saves you ${monthsSaved} month${monthsSaved > 1 ? 's' : ''} (${daysSaved?.toLocaleString()} days).`
+            : '';
+        
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: `Briefly explain in a friendly and motivational tone how these changes affect the user's home buying timeline: ${changesSummary}. The original ETA was ${originalETA}, and the new ETA is ${newETA}. Start with a positive emoji. The response should be a single paragraph.`,
+            contents: `Briefly explain in a friendly and motivational tone how these changes affect the user's home buying timeline: ${changesSummary}. The original ETA was ${originalETA}, and the new ETA is ${newETA}.${savedInfo} Start with a positive emoji. The response should be a single paragraph under 100 words. Be specific about the time saved and encourage the user.`,
         });
         return response.text;
     } catch (error) {
