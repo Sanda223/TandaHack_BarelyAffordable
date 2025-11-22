@@ -7,6 +7,8 @@ import {
   RecurringExpense,
 } from '../types';
 
+const ANALYZER_API = import.meta.env.VITE_ANALYZER_API;
+
 const RECURRING_MIN_MONTHS = 2;
 const RECURRING_MIN_TX = 2;
 const AMOUNT_ROUND_DECIMALS = 0;
@@ -424,6 +426,107 @@ const summarizeKpis = (
   };
 };
 
+const callRemoteAnalyzer = async (files: File[], employerHint?: string) => {
+  const endpoint = `${ANALYZER_API.replace(/\/$/, '')}/api/analyze`;
+  const formData = new FormData();
+  files.forEach((file) => formData.append('files', file));
+  if (employerHint) formData.append('employer', employerHint);
+
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    throw new Error(`Analyzer API returned ${res.status}`);
+  }
+  return res.json();
+};
+
+const mapPythonAnalysis = (payload: any, employmentType?: string): BankStatementAnalysis => {
+  const toRecurring = (r: any): RecurringExpense => ({
+    name: r.merchant ?? r.name ?? 'Recurring',
+    averageAmount: Number(r.avg_amount ?? r.estimated_monthly_cost ?? 0),
+    category: r.category ?? 'Unknown',
+    macroCategory: r.macro_category ?? 'Unknown',
+    transactionCount: Number(r.tx_count ?? r.transaction_count ?? 0),
+    monthCount: Number(r.month_count ?? 0),
+    estimatedMonthlyCost: Number(r.estimated_monthly_cost ?? r.avg_amount ?? 0),
+  });
+
+  const recurringRaw = payload.recurring_expenses_raw ?? [];
+  const expenseByMacro = (payload.expenses?.by_macro_category ?? []).map(
+    (m: any): MacroCategorySummary => ({
+      macroCategory: m.macro_category ?? 'Unknown',
+      totalSpend: Number(m.total_spend ?? 0),
+      monthCount: Number(m.month_count ?? 0),
+      averageMonthlySpend: Number(m.avg_monthly_spend ?? 0),
+    }),
+  );
+
+  const expenseByCategory = (payload.expenses?.by_category ?? []).map(
+    (c: any): ExpenseCategorySummary => ({
+      category: c.category ?? 'Unknown',
+      macroCategory: c.macro_category ?? 'Unknown',
+      totalSpend: Number(c.total_spend ?? 0),
+      monthCount: Number(c.month_count ?? 0),
+      averageMonthlySpend: Number(c.avg_monthly_spend ?? 0),
+    }),
+  );
+
+  const recurringExpenses = recurringRaw.map(toRecurring);
+  const recurringEssential = (payload.expenses?.recurring_essential ?? []).map(toRecurring);
+  const recurringLifestyle = (payload.expenses?.recurring_lifestyle ?? []).map(toRecurring);
+  const leakageHotspots = (payload.expenses?.leakage_hotspots ?? []).map(toRecurring);
+
+  const incomeSources = (payload.income?.sources ?? []).map(
+    (src: any): IncomeSource => ({
+      name: src.merchant ?? src.name ?? 'Income',
+      totalAmount: Number(src.total_amount ?? 0),
+      averageAmount: Number(src.avg_amount ?? 0),
+      transactionCount: Number(src.tx_count ?? 0),
+      monthCount: Number(src.month_count ?? 0),
+      averageMonthlyAmount: Number(src.avg_monthly_amount ?? 0),
+      type: src.income_type ?? 'Income',
+      macroCategory: src.macro_category ?? 'Income',
+    }),
+  );
+
+  const monthlyBreakdown = (payload.cashflow?.months ?? payload.cashflow?.monthly_breakdown ?? []).map(
+    (m: any): MonthlyBreakdown => ({
+      month: m.month_key ?? m.month ?? '',
+      totalInflow: Number(m.total_inflow ?? 0),
+      totalOutflow: Number(m.total_outflow ?? 0),
+      savings: Number(m.savings ?? 0),
+      transactionCount: Number(m.tx_count ?? m.transaction_count ?? 0),
+    }),
+  );
+
+  return {
+    monthlyAverageSpend: Number(payload.cashflow?.average_monthly_spend ?? 0),
+    monthlyAverageSavings: Number(payload.cashflow?.average_monthly_savings ?? 0),
+    recurringExpenses,
+    monthlyBreakdown,
+    incomeSources,
+    totalTransactions: Number(payload.meta?.total_transactions ?? 0),
+    totalInflowTransactions: Number(payload.meta?.total_inflow_transactions ?? 0),
+    totalOutflowTransactions: Number(payload.meta?.total_outflow_transactions ?? 0),
+    totalAverageMonthlyIncome: Number(payload.income?.total_avg_monthly_income ?? 0),
+    expenseByMacro,
+    expenseByCategory,
+    recurringEssential,
+    recurringLifestyle,
+    leakageHotspots,
+    monthsCovered: payload.meta?.months_covered ?? [],
+    startDate: payload.meta?.start_date ?? '',
+    endDate: payload.meta?.end_date ?? '',
+    inference: {
+      employer: payload.income?.sources?.[0]?.merchant,
+      employmentType: employmentType ?? '',
+    },
+  };
+};
+
 export const analyzeBankStatements = async (
   files: File[],
   {
@@ -434,6 +537,17 @@ export const analyzeBankStatements = async (
     employmentType?: string;
   } = {},
 ): Promise<BankStatementAnalysis> => {
+  if (ANALYZER_API) {
+    try {
+      const apiResult = await callRemoteAnalyzer(files, employerHint);
+      if (apiResult) {
+        return mapPythonAnalysis(apiResult, employmentType);
+      }
+    } catch (err) {
+      console.error('Remote analyzer failed, falling back to client parser:', err);
+    }
+  }
+
   const fileContents = await Promise.all(files.map((file) => file.text()));
   const allRows: string[][] = [];
 
