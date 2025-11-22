@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Icon from '../components/Icon';
-import logo from '../assets/logo.png';
+// import logo from '../assets/logo.png';
 import { BankStatementAnalysis, HomeCriteria, PublicUser, UserProfile } from '../types';
-import { registerUser } from '../services/authService';
+import { registerUserWithSupabase } from '../services/supabaseAuth';
 import { analyzeBankStatements } from '../services/bankAnalyzer';
 
 interface SignUpProps {
@@ -376,7 +376,7 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
         autoEstimate: autoPrice,
       };
 
-      const user = await registerUser({
+      const user = await registerUserWithSupabase({
         fullName,
         email,
         password,
@@ -816,7 +816,7 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
     <div className="mx-auto flex min-h-screen w-full max-w-2xl flex-col space-y-6 px-4 -mt-8 pb-2">
       <div className="text-center">
         <div className="mx-auto flex h-60 w-60 sm:h-64 sm:w-64 items-center justify-center -mb-20">
-          <img src={logo} alt="Days-to" className="block h-full w-full object-contain" />
+          {/* <img src={logo} alt="Days-to" className="block h-full w-full object-contain" /> */}
         </div>
         <h1 className="text-3xl font-bold text-text-primary">Let’s add your details</h1>
         <p className="mt-1 text-sm text-text-secondary">
