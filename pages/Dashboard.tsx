@@ -60,11 +60,8 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, criteria, setActivePage,
   const depositGoal = useMemo(() => criteria.estimatedPrice * (criteria.isFirstHomeBuyer ? 0.05 : 0.20), [criteria.estimatedPrice, criteria.isFirstHomeBuyer]);
   
   const monthlySavings = useMemo(() => {
-    if (bankAnalysis?.monthlyAverageSavings !== undefined) {
-      return bankAnalysis.monthlyAverageSavings;
-    }
     return profile.monthlyIncome * 0.25;
-  }, [bankAnalysis?.monthlyAverageSavings, profile.monthlyIncome]);
+  }, [profile.monthlyIncome]);
   const dailySavings = useMemo(() => monthlySavings / (365.25 / 12), [monthlySavings]);
 
   const daysToGoal = useMemo(() => {

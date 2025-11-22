@@ -4,7 +4,7 @@ import Button from '../components/Button';
 import Icon from '../components/Icon';
 import logo from '../assets/logo.png';
 import { BankStatementAnalysis, HomeCriteria, PublicUser, UserProfile } from '../types';
-import { registerUser } from '../services/authService';
+import { registerUserWithSupabase } from '../services/supabaseAuth';
 import { analyzeBankStatements } from '../services/bankAnalyzer';
 
 interface SignUpProps {
@@ -376,7 +376,7 @@ const SignUp: React.FC<SignUpProps> = ({ onSuccess, onSwitch }) => {
         autoEstimate: autoPrice,
       };
 
-      const user = await registerUser({
+      const user = await registerUserWithSupabase({
         fullName,
         email,
         password,

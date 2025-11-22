@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { LearningItem as LearningItemType } from '../types';
 import Card from '../components/Card';
 import Icon from '../components/Icon';
+import { askHomeBuyingQuestion } from '../services/geminiService';
 
 // Extend LearningItemType to use icons and a learn more URL
 interface LearningItem extends Omit<LearningItemType, 'emoji'> {
@@ -10,11 +12,11 @@ interface LearningItem extends Omit<LearningItemType, 'emoji'> {
 }
 
 const initialLearningItems: LearningItem[] = [
-  { id: 'lmi', title: "Lender's Mortgage Insurance (LMI)", icon: 'shield-check', content: "LMI protects the lender if you borrow over 80% of a property's value. It's a one-off premium you pay.", completed: true, learnMoreUrl: 'https://www.ato.gov.au/individuals-and-families/your-home-and-property/investment-properties/rental-expenses-to-claim/loan-interest-and-other-borrowing-expenses' },
-  { id: 'stamp-duty', title: 'Stamp Duty', icon: 'document-text', content: "A state government tax on property transfers. The amount varies by state and property value. First-home buyer concessions may apply!", completed: false, learnMoreUrl: 'https://www.ato.gov.au/individuals-and-families/your-home-and-property/your-main-residence/calculating-the-cost-base-for-your-main-residence' },
-  { id: 'grants', title: 'First Home Super Saver Scheme', icon: 'gift', content: 'A government scheme to help you save for your first home inside your super fund, offering tax benefits.', completed: false, learnMoreUrl: 'https://www.ato.gov.au/individuals-and-families/your-home-and-property/first-home-super-saver-scheme' },
-  { id: 'pre-approval', title: 'Pre-Approval', icon: 'badge-check', content: "An indication from a lender of how much you can likely borrow. It's not a full loan approval but makes you a more serious buyer.", completed: false, learnMoreUrl: 'https://www.ato.gov.au/individuals-and-families/your-home-and-property' },
-  { id: 'offset', title: 'Offset Accounts', icon: 'library', content: "A transaction account linked to your home loan. Its balance reduces your loan principal, saving you interest.", completed: false, learnMoreUrl: 'https://www.ato.gov.au/individuals-and-families/your-home-and-property/investment-properties/rental-expenses-to-claim/interest-expenses#ato-Loanarrangements' },
+  { id: 'lmi', title: "Lender's Mortgage Insurance (LMI)", icon: 'shield-check', content: "LMI protects the lender if you borrow over 80% of a property's value. It's a one-off premium you pay.", completed: true, learnMoreUrl: 'https://insurancecouncil.com.au/articles/lenders-mortgage-insurance/' },
+  { id: 'stamp-duty', title: 'Stamp Duty', icon: 'document-text', content: "A state government tax on property transfers. The amount varies by state and property value. First-home buyer concessions may apply!", completed: false, learnMoreUrl: 'https://www.commbank.com.au/brighter/property/what-is-stamp-duty.html' },
+  { id: 'grants', title: 'First Home Super Saver Scheme', icon: 'gift', content: 'A government scheme to help you save for your first home inside your super fund, offering tax benefits.', completed: false, learnMoreUrl: 'https://www.ato.gov.au/individuals-and-families/super-for-individuals-and-families/super/withdrawing-and-using-your-super/early-access-to-super/first-home-super-saver-scheme' },
+  { id: 'pre-approval', title: 'Pre-Approval', icon: 'badge-check', content: "An indication from a lender of how much you can likely borrow. It's not a full loan approval but makes you a more serious buyer.", completed: false, learnMoreUrl: 'https://www.nab.com.au/personal/life-moments/home-property/buy-first-home/pre-approval' },
+  { id: 'offset', title: 'Offset Accounts', icon: 'library', content: "A transaction account linked to your home loan. Its balance reduces your loan principal, saving you interest.", completed: false, learnMoreUrl: 'https://www.anz.com.au/personal/home-loans/tips-and-guides/offset-accounts-explained/' },
 ];
 
 const LearningCard: React.FC<{ item: LearningItem; onToggleComplete: (id: string) => void; }> = ({ item, onToggleComplete }) => {
@@ -48,7 +50,7 @@ const LearningCard: React.FC<{ item: LearningItem; onToggleComplete: (id: string
               onClick={(e) => e.stopPropagation()}
               className="inline-flex items-center mt-4 text-sm font-semibold text-primary hover:text-accent transition-colors group-hover:underline"
             >
-              Learn More on ATO.gov.au
+              Learn More...
               <Icon name="arrow-right" className="w-4 h-4 ml-1.5" />
             </a>
         </div>
@@ -74,15 +76,20 @@ const Learning: React.FC = () => {
   const totalCount = items.length;
   const progressPercentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
-  const handleAskQuestion = (e: React.FormEvent) => {
+  const handleAskQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!question.trim()) return;
     setIsThinking(true);
     setAnswerPreview(null);
-    setTimeout(() => {
-      setAnswerPreview("Great question! We'll soon use AI here to give you personalized guidance.");
+    
+    try {
+      const answer = await askHomeBuyingQuestion(question);
+      setAnswerPreview(answer);
+    } catch (error) {
+      setAnswerPreview("Sorry, I couldn't process your question. Please try again.");
+    } finally {
       setIsThinking(false);
-    }, 800);
+    }
   };
 
   return (
@@ -114,12 +121,12 @@ const Learning: React.FC = () => {
             </button>
           </div>
           {answerPreview && (
-            <p className="text-sm text-text-primary bg-light-gray rounded-xl px-4 py-3">
-              {answerPreview}
-            </p>
+            <div className="text-sm text-text-primary bg-light-gray rounded-xl px-4 py-3 prose prose-sm max-w-none">
+              <ReactMarkdown>{answerPreview}</ReactMarkdown>
+            </div>
           )}
           {!answerPreview && (
-            <p className="text-xs text-text-secondary">Powered by AI soon – we’ll connect a chatbot to answer detailed finance questions.</p>
+            <p className="text-xs text-text-secondary">Powered by Gemini AI – Ask me anything about buying your first home in Australia!</p>
           )}
         </form>
       </Card>

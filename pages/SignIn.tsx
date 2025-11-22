@@ -3,7 +3,7 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import logo from '../assets/logo.png';
 import { PublicUser } from '../types';
-import { authenticateUser } from '../services/authService';
+import { signInWithSupabase } from '../services/supabaseAuth';
 
 interface SignInProps {
   onSuccess: (user: PublicUser) => void;
@@ -30,7 +30,7 @@ const SignIn: React.FC<SignInProps> = ({ onSuccess, onSwitch }) => {
     setIsLoading(true);
     setError('');
     try {
-      const user = await authenticateUser(email, password, rememberMe);
+      const user = await signInWithSupabase(email, password);
       onSuccess(user);
     } catch (authError) {
       setError(authError instanceof Error ? authError.message : 'Unable to sign in right now.');

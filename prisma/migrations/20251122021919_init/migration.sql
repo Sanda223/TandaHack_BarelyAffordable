@@ -1,0 +1,46 @@
+-- CreateTable
+CREATE TABLE "users" (
+    "id" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "firstName" TEXT,
+    "lastName" TEXT,
+    "dateOfBirth" TIMESTAMP(3),
+    "employmentStatus" TEXT,
+    "incomeAmount" DECIMAL(12,2) NOT NULL DEFAULT 0,
+    "incomeFrequency" TEXT NOT NULL DEFAULT 'yearly',
+    "currentSavings" DECIMAL(12,2) NOT NULL DEFAULT 0,
+    "savingsGoal" DECIMAL(12,2),
+    "monthlyTarget" DECIMAL(12,2) NOT NULL DEFAULT 0,
+    "targetPropertyCity" TEXT,
+    "targetPropertyState" TEXT,
+    "targetPropertyBedrooms" INTEGER,
+    "targetPropertyBathrooms" INTEGER,
+    "targetPropertyGarage" BOOLEAN,
+    "estimatedPropertyPrice" DECIMAL(12,2),
+    "depositTarget" DECIMAL(12,2),
+    "avgHousingSpend" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "avgTransportSpend" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "avgFoodSpend" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "avgUtilitiesSpend" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "avgEntertainmentSpend" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "avgHealthcareSpend" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "avgSubscriptionsSpend" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "avgOtherSpend" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "avgTotalMonthlySpend" DECIMAL(12,2) NOT NULL DEFAULT 0,
+    "bankAccountName" TEXT,
+    "bankAccountNumber" TEXT,
+    "currentBalance" DECIMAL(12,2) NOT NULL DEFAULT 0,
+    "lastCsvAnalysisDate" TIMESTAMP(3),
+    "csvMonthsAnalyzed" INTEGER NOT NULL DEFAULT 0,
+    "currency" TEXT NOT NULL DEFAULT 'AUD',
+    "notificationsEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "budgetAlerts" BOOLEAN NOT NULL DEFAULT true,
+
+    CONSTRAINT "users_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "users_email_key" ON "users"("email");

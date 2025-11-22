@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String   // Should be hashed before storing
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Personal Information
+  firstName String?
+  lastName  String?
+  dateOfBirth DateTime?
+  hobbies   String[] @default([]) // Array of hobby strings
+  
+  // Employment & Income Information
+  employmentStatus String? // "fulltime", "parttime", "casual", "unemployed", "student"
+  incomeAmount     Decimal @default(0) @db.Decimal(12, 2)
+  incomeFrequency  String  @default("yearly") // "weekly" for non-fulltime, "yearly" for fulltime
+  
+  // Savings Information
+  currentSavings  Decimal @default(0) @db.Decimal(12, 2)
+  savingsGoal     Decimal? @db.Decimal(12, 2)
+  monthlyTarget   Decimal @default(0) @db.Decimal(12, 2)
+  
+  // Property/Housing Goals (from property_estimates_au.csv)
+  targetPropertyCity      String?
+  targetPropertyState     String?
+  targetPropertyBedrooms  Int?
+  targetPropertyBathrooms Int?
+  targetPropertyGarage    Boolean?
+  estimatedPropertyPrice  Decimal? @db.Decimal(12, 2)
+  depositTarget           Decimal? @db.Decimal(12, 2) // Typically 20% of property price
+  
+  // Average Monthly Spending by Category (calculated from CSV analysis)
+  avgHousingSpend       Decimal @default(0) @db.Decimal(10, 2)
+  avgTransportSpend     Decimal @default(0) @db.Decimal(10, 2)
+  avgFoodSpend          Decimal @default(0) @db.Decimal(10, 2)
+  avgUtilitiesSpend     Decimal @default(0) @db.Decimal(10, 2)
+  avgEntertainmentSpend Decimal @default(0) @db.Decimal(10, 2)
+  avgHealthcareSpend    Decimal @default(0) @db.Decimal(10, 2)
+  avgSubscriptionsSpend Decimal @default(0) @db.Decimal(10, 2)
+  avgOtherSpend         Decimal @default(0) @db.Decimal(10, 2)
+  
+  // Total Average Monthly Spending
+  avgTotalMonthlySpend Decimal @default(0) @db.Decimal(12, 2)
+  
+  // Bank Account Information
+  bankAccountName   String?
+  bankAccountNumber String?
+  currentBalance    Decimal @default(0) @db.Decimal(12, 2)
+  
+  // CSV Analysis Metadata
+  lastCsvAnalysisDate DateTime?
+  csvMonthsAnalyzed   Int      @default(0) // Number of months of data analyzed
+  
+  // Settings & Preferences
+  currency             String  @default("AUD")
+  notificationsEnabled Boolean @default(true)
+  budgetAlerts         Boolean @default(true)
+  
+  @@map("users")
+}
