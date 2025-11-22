@@ -1,14 +1,16 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-// Ensure the API key is available. In a real app, this would be handled more robustly.
-if (!process.env.API_KEY) {
-  console.warn("API_KEY environment variable not set. Using mock data.");
+// Get API key from Vite environment variables
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
+if (!API_KEY) {
+  console.warn("VITE_GEMINI_API_KEY environment variable not set. Using mock data.");
 }
 
 const getAi = () => {
-    if (!process.env.API_KEY) return null;
-    return new GoogleGenAI({ apiKey: process.env.API_KEY });
+    if (!API_KEY) return null;
+    return new GoogleGenAI({ apiKey: API_KEY });
 }
 
 export const suggestSkills = async (jobTitle: string, hobbies: string[]): Promise<string[]> => {
@@ -208,5 +210,34 @@ export const shortenExpenseNames = async (names: string[]): Promise<Record<strin
       acc[name] = name.length > 16 ? `${name.slice(0, 13)}...` : name;
       return acc;
     }, {});
+  }
+};
+
+export const askHomeBuyingQuestion = async (question: string): Promise<string> => {
+  const ai = getAi();
+  if (!ai) {
+    return Promise.resolve(
+      "I'm here to help with home buying questions! However, the AI service is currently unavailable. Please try again later or check that your API key is configured correctly."
+    );
+  }
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `You are a helpful financial advisor specializing in home buying in Australia. Answer this question concisely and practically: ${question}.
+      
+      Focus on:
+      - Australian property market specifics
+      - First home buyer schemes and grants
+      - Stamp duty and LMI
+      - Savings strategies
+      - Mortgage pre-approval
+      
+      Keep your response under 150 words and actionable.`,
+    });
+    return response.text;
+  } catch (error) {
+    console.error("Error asking home buying question:", error);
+    return "I'm having trouble processing your question right now. Please try rephrasing it or try again in a moment.";
   }
 };
