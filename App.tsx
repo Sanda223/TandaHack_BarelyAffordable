@@ -197,7 +197,7 @@ const App: React.FC = () => {
       case Page.Simulator:
         return wrapContent(<Simulator profile={profile} criteria={criteria} currentSavings={totalBalance ?? 0}/>);
       case Page.Insights:
-        return wrapContent(<Insights profile={profile} />);
+        return wrapContent(<Insights profile={profile} bankAnalysis={bankAnalysis} />);
       case Page.FinancialReport:
         return wrapContent(
           <FinancialReport

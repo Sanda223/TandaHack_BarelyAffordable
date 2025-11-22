@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile } from '../types';
+import { UserProfile, BankStatementAnalysis } from '../types';
 import Card from '../components/Card';
 import Icon from '../components/Icon';
-import { generateIncomeOpportunities, generateSpendingSuggestions } from '../services/geminiService';
+import { generateIncomeOpportunitiesFromHobbies, analyzeSpendingCategories } from '../services/geminiService';
 
 const SuggestionCard: React.FC<{ title: string; description: string; value: string; icon: React.ComponentProps<typeof Icon>['name'];}> = ({ title, description, value, icon }) => (
     <div className="flex items-start gap-4 rounded-2xl border border-gray-200/80 bg-card-bg p-4 shadow-sm">
@@ -17,7 +17,7 @@ const SuggestionCard: React.FC<{ title: string; description: string; value: stri
     </div>
 );
 
-const Insights: React.FC<{ profile: UserProfile }> = ({ profile }) => {
+const Insights: React.FC<{ profile: UserProfile; bankAnalysis: BankStatementAnalysis | null }> = ({ profile, bankAnalysis }) => {
   const [incomeOpportunities, setIncomeOpportunities] = useState<any[]>([]);
   const [spendingSuggestions, setSpendingSuggestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,8 +25,23 @@ const Insights: React.FC<{ profile: UserProfile }> = ({ profile }) => {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const incomePromise = profile.skills.length > 0 ? generateIncomeOpportunities(profile.skills) : Promise.resolve([]);
-      const spendingPromise = generateSpendingSuggestions();
+      
+      // Generate income opportunities based on hobbies
+      const incomePromise = profile.hobbies.length > 0
+        ? generateIncomeOpportunitiesFromHobbies(profile.hobbies, profile.monthlyIncome)
+        : Promise.resolve([]);
+      
+      // Use bank analysis data if available for personalized spending suggestions
+      let spendingPromise;
+      if (bankAnalysis && bankAnalysis.expenseByMacro && bankAnalysis.expenseByMacro.length > 0) {
+        const spendingData = bankAnalysis.expenseByMacro.map(item => ({
+          category: item.macroCategory,
+          amount: item.averageMonthlySpend
+        }));
+        spendingPromise = analyzeSpendingCategories(spendingData);
+      } else {
+        spendingPromise = Promise.resolve([]);
+      }
       
       const [income, spending] = await Promise.all([incomePromise, spendingPromise]);
       
@@ -36,7 +51,7 @@ const Insights: React.FC<{ profile: UserProfile }> = ({ profile }) => {
     };
 
     fetchData();
-  }, [profile.skills]);
+  }, [profile.hobbies, profile.monthlyIncome, bankAnalysis]);
 
   return (
     <div className="space-y-6">
@@ -59,26 +74,54 @@ const Insights: React.FC<{ profile: UserProfile }> = ({ profile }) => {
       ) : (
         <div className="space-y-4">
           <Card>
-              <h3 className="font-semibold text-text-primary mb-3 text-lg flex items-center">Earn Faster With Your Skills <Icon name="rocket" className="w-5 h-5 ml-2"/></h3>
-              <div className="space-y-3">
-              {incomeOpportunities.map((opp, i) => (
-                  <SuggestionCard 
-                      key={`income-${i}`} title={opp.title} description={opp.description}
-                      value={`+$${opp.estimatedIncome}/mo`} icon="lightbulb"
-                  />
-              ))}
-              </div>
+              <h3 className="font-semibold text-text-primary mb-3 text-lg flex items-center">
+                Boost Your Income <Icon name="rocket" className="w-5 h-5 ml-2"/>
+              </h3>
+              {incomeOpportunities.length > 0 ? (
+                <div className="space-y-3">
+                  {incomeOpportunities.map((opp, i) => (
+                    <SuggestionCard
+                      key={`income-${i}`}
+                      title={opp.title}
+                      description={opp.description}
+                      value={`+$${opp.estimatedIncome}/mo`}
+                      icon="lightbulb"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center p-6 bg-light-gray rounded-xl">
+                  <Icon name="lightbulb" className="w-12 h-12 mx-auto text-text-secondary mb-2" />
+                  <p className="text-text-secondary text-sm">
+                    Add your hobbies in the Profile page to get personalized income opportunities based on your interests and skills.
+                  </p>
+                </div>
+              )}
           </Card>
           <Card>
-              <h3 className="font-semibold text-text-primary mb-3 text-lg flex items-center">Improve Your Spending <Icon name="trending-down" className="w-5 h-5 ml-2"/></h3>
-              <div className="space-y-3">
-              {spendingSuggestions.map((sugg, i) => (
-                  <SuggestionCard 
-                      key={`spend-${i}`} title={sugg.title} description={sugg.description}
-                      value={`-$${sugg.potentialSavings}/mo`} icon="cash"
-                  />
-              ))}
-              </div>
+              <h3 className="font-semibold text-text-primary mb-3 text-lg flex items-center">
+                Personalized Spending Analysis <Icon name="trending-down" className="w-5 h-5 ml-2"/>
+              </h3>
+              {spendingSuggestions.length > 0 ? (
+                <div className="space-y-3">
+                  {spendingSuggestions.map((sugg, i) => (
+                    <SuggestionCard
+                      key={`spend-${i}`}
+                      title={sugg.title}
+                      description={sugg.description}
+                      value={`-$${sugg.potentialSavings}/mo`}
+                      icon="cash"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center p-6 bg-light-gray rounded-xl">
+                  <Icon name="chart-bar" className="w-12 h-12 mx-auto text-text-secondary mb-2" />
+                  <p className="text-text-secondary text-sm">
+                    Upload your bank statements in the Profile page to get personalized spending recommendations based on your actual spending patterns.
+                  </p>
+                </div>
+              )}
           </Card>
         </div>
       )}
