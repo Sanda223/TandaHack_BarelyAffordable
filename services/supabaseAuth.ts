@@ -154,6 +154,7 @@ export const registerUserWithSupabase = async (payload: CreateUserPayload): Prom
 };
 
 export const signInWithSupabase = async (email: string, password: string): Promise<PublicUser> => {
+  // Authenticate with Supabase Auth
   const { data, error } = await supabase.auth.signInWithPassword({
     email: email.trim().toLowerCase(),
     password,
@@ -177,32 +178,77 @@ export const signInWithSupabase = async (email: string, password: string): Promi
 
   if (fetchError) throw fetchError;
 
-  // Convert to PublicUser format (you'll need to map the database fields)
+  // Determine job type from employment status
+  const jobTypeMap: Record<string, 'Salary' | 'Hourly' | 'Contract' | 'Casual' | ''> = {
+    fulltime: 'Salary',
+    parttime: 'Hourly',
+    casual: 'Casual',
+    contract: 'Contract',
+  };
+
+  const jobType = jobTypeMap[userData.employmentStatus] || '';
+  
+  // Calculate income based on frequency
+  const annualIncome = userData.incomeFrequency === 'yearly'
+    ? Number(userData.incomeAmount)
+    : Number(userData.incomeAmount) * 52;
+  
+  const monthlyIncome = userData.incomeFrequency === 'yearly'
+    ? Math.round(Number(userData.incomeAmount) / 12)
+    : Math.round((Number(userData.incomeAmount) * 52) / 12);
+
+  // Convert to PublicUser format
   return {
-    id: data.user.id,
-    fullName: `${userData.first_name} ${userData.last_name}`.trim(),
-    email: data.user.email || '',
+    id: userData.id,
+    fullName: `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
+    email: userData.email || '',
     profile: {
-      jobTitle: '',
-      jobType: '',
-      monthlyIncome: 0,
-      annualIncome: 0,
+      jobTitle: '', // We don't store this in the database currently
+      jobType: jobType,
+      monthlyIncome: monthlyIncome,
+      annualIncome: annualIncome,
       hobbies: userData.hobbies || [],
-      skills: [],
+      skills: [], // We don't store this in the database currently
     },
     criteria: {
-      bedrooms: userData.target_property_bedrooms || 0,
-      bathrooms: userData.target_property_bathrooms || 0,
-      location: userData.target_property_city || '',
-      garage: userData.target_property_garage || false,
+      bedrooms: userData.targetPropertyBedrooms || 0,
+      bathrooms: userData.targetPropertyBathrooms || 0,
+      location: userData.targetPropertyCity || '',
+      garage: userData.targetPropertyGarage || false,
       propertyType: 'House',
       isFirstHomeBuyer: true,
-      estimatedPrice: userData.estimated_property_price || 0,
+      estimatedPrice: Number(userData.estimatedPropertyPrice) || 0,
       autoEstimate: false,
     },
-    bankAnalysis: null,
-    totalBalance: userData.current_balance || 0,
-    createdAt: data.user.created_at,
+    bankAnalysis: {
+      monthlyAverageSpend: Number(userData.avgTotalMonthlySpend) || 0,
+      monthlyAverageSavings: Number(userData.monthlyTarget) || 0,
+      recurringExpenses: [],
+      monthlyBreakdown: [],
+      incomeSources: [],
+      totalTransactions: 0,
+      totalInflowTransactions: 0,
+      totalOutflowTransactions: 0,
+      totalAverageMonthlyIncome: monthlyIncome,
+      expenseByMacro: [
+        { macroCategory: 'Housing', totalSpend: Number(userData.avgHousingSpend) || 0, monthCount: 3, averageMonthlySpend: Number(userData.avgHousingSpend) || 0 },
+        { macroCategory: 'Transport', totalSpend: Number(userData.avgTransportSpend) || 0, monthCount: 3, averageMonthlySpend: Number(userData.avgTransportSpend) || 0 },
+        { macroCategory: 'Food & Dining', totalSpend: Number(userData.avgFoodSpend) || 0, monthCount: 3, averageMonthlySpend: Number(userData.avgFoodSpend) || 0 },
+        { macroCategory: 'Utilities', totalSpend: Number(userData.avgUtilitiesSpend) || 0, monthCount: 3, averageMonthlySpend: Number(userData.avgUtilitiesSpend) || 0 },
+        { macroCategory: 'Entertainment', totalSpend: Number(userData.avgEntertainmentSpend) || 0, monthCount: 3, averageMonthlySpend: Number(userData.avgEntertainmentSpend) || 0 },
+        { macroCategory: 'Healthcare', totalSpend: Number(userData.avgHealthcareSpend) || 0, monthCount: 3, averageMonthlySpend: Number(userData.avgHealthcareSpend) || 0 },
+        { macroCategory: 'Subscriptions', totalSpend: Number(userData.avgSubscriptionsSpend) || 0, monthCount: 3, averageMonthlySpend: Number(userData.avgSubscriptionsSpend) || 0 },
+      ],
+      expenseByCategory: [],
+      recurringEssential: [],
+      recurringLifestyle: [],
+      leakageHotspots: [],
+      monthsCovered: [],
+      startDate: '',
+      endDate: '',
+    },
+    totalBalance: Number(userData.currentBalance) || 0,
+    createdAt: userData.createdAt,
   };
 };
 
