@@ -438,7 +438,8 @@ const callRemoteAnalyzer = async (files: File[], employerHint?: string) => {
   });
 
   if (!res.ok) {
-    throw new Error(`Analyzer API returned ${res.status}`);
+    const text = await res.text().catch(() => '');
+    throw new Error(`Analyzer API returned ${res.status}: ${text || res.statusText}`);
   }
   return res.json();
 };
@@ -541,10 +542,11 @@ export const analyzeBankStatements = async (
     try {
       const apiResult = await callRemoteAnalyzer(files, employerHint);
       if (apiResult) {
-        return mapPythonAnalysis(apiResult, employmentType);
+        const mapped = mapPythonAnalysis(apiResult, employmentType);
+        return { ...mapped, inference: { ...mapped.inference, source: 'remote' } };
       }
     } catch (err) {
-      console.error('Remote analyzer failed, falling back to client parser:', err);
+      console.warn('Remote analyzer failed, falling back to client parser:', err);
     }
   }
 

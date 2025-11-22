@@ -43,6 +43,29 @@ const createInitialCriteria = (): HomeCriteria => ({
   ...defaultCriteria,
 });
 
+const loadLocalBankAnalysis = (userId: string): BankStatementAnalysis | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(`bank_analysis_${userId}`);
+    return raw ? (JSON.parse(raw) as BankStatementAnalysis) : null;
+  } catch {
+    return null;
+  }
+};
+
+const saveLocalBankAnalysis = (userId: string, analysis: BankStatementAnalysis | null) => {
+  if (typeof window === 'undefined') return;
+  try {
+    if (analysis) {
+      window.localStorage.setItem(`bank_analysis_${userId}`, JSON.stringify(analysis));
+    } else {
+      window.localStorage.removeItem(`bank_analysis_${userId}`);
+    }
+  } catch {
+    // ignore
+  }
+};
+
 const App: React.FC = () => {
   const [activePage, setActivePage] = useState<Page>(Page.SignIn);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -94,7 +117,8 @@ const App: React.FC = () => {
           setProfile(savedUser.profile);
           setCriteria(savedUser.criteria);
           setFullName(savedUser.fullName);
-          setBankAnalysis(savedUser.bankAnalysis ?? null);
+          const localAnalysis = loadLocalBankAnalysis(savedUser.id);
+          setBankAnalysis(localAnalysis ?? savedUser.bankAnalysis ?? null);
           setTotalBalance(savedUser.totalBalance ?? null);
           setIsAuthenticated(true);
           setActivePage(Page.Dashboard);
@@ -115,6 +139,7 @@ const App: React.FC = () => {
     setCriteria(user.criteria);
     setFullName(user.fullName);
     setBankAnalysis(user.bankAnalysis ?? null);
+    saveLocalBankAnalysis(user.id, user.bankAnalysis ?? null);
     setTotalBalance(user.totalBalance ?? null);
     setIsAuthenticated(true);
     setActivePage(Page.Dashboard);
@@ -131,6 +156,12 @@ const App: React.FC = () => {
     setProfile(createInitialProfile());
     setCriteria(createInitialCriteria());
   };
+
+  useEffect(() => {
+    if (currentUserId) {
+      saveLocalBankAnalysis(currentUserId, bankAnalysis);
+    }
+  }, [currentUserId, bankAnalysis]);
 
   const renderPage = () => {
     if (isCheckingAuth) {
