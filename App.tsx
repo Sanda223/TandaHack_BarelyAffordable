@@ -10,7 +10,8 @@ import Insights from './pages/Insights';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
 import FinancialReport from './pages/FinancialReport';
-import { getCurrentUser, persistAuthenticatedState, signOutUser } from './services/authService';
+import { getCurrentSupabaseUser, signOutFromSupabase } from './services/supabaseAuth';
+import { supabase } from './lib/supabase';
 
 const defaultProfile: UserProfile = {
   jobTitle: 'Software Engineer',
@@ -45,6 +46,7 @@ const createInitialCriteria = (): HomeCriteria => ({
 const App: React.FC = () => {
   const [activePage, setActivePage] = useState<Page>(Page.SignIn);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   const [profile, setProfile] = useState<UserProfile>(() => createInitialProfile());
 
@@ -84,23 +86,28 @@ const App: React.FC = () => {
   }, [criteria.autoEstimate, criteria.bedrooms, criteria.bathrooms, criteria.garage, criteria.location]);
 
   useEffect(() => {
-    const savedUser = getCurrentUser();
-    if (savedUser) {
-      setCurrentUserId(savedUser.id);
-      setProfile(savedUser.profile);
-      setCriteria(savedUser.criteria);
-      setFullName(savedUser.fullName);
-      setBankAnalysis(savedUser.bankAnalysis ?? null);
-      setTotalBalance(savedUser.totalBalance ?? null);
-      setIsAuthenticated(true);
-      setActivePage(Page.Dashboard);
-    }
+    const checkSession = async () => {
+      try {
+        const savedUser = await getCurrentSupabaseUser();
+        if (savedUser) {
+          setCurrentUserId(savedUser.id);
+          setProfile(savedUser.profile);
+          setCriteria(savedUser.criteria);
+          setFullName(savedUser.fullName);
+          setBankAnalysis(savedUser.bankAnalysis ?? null);
+          setTotalBalance(savedUser.totalBalance ?? null);
+          setIsAuthenticated(true);
+          setActivePage(Page.Dashboard);
+        }
+      } finally {
+        setIsCheckingAuth(false);
+      }
+    };
+    checkSession();
   }, []);
 
-  useEffect(() => {
-    if (!isAuthenticated || !currentUserId) return;
-    persistAuthenticatedState(currentUserId, { profile, criteria, bankAnalysis, totalBalance });
-  }, [profile, criteria, bankAnalysis, totalBalance, isAuthenticated, currentUserId]);
+  // Supabase automatically persists session, so we don't need to manually persist state
+  // The session is stored in localStorage and will be restored on page reload
 
   const handleAuthSuccess = (user: PublicUser) => {
     setCurrentUserId(user.id);
@@ -113,8 +120,8 @@ const App: React.FC = () => {
     setActivePage(Page.Dashboard);
   };
 
-  const handleSignOut = () => {
-    signOutUser();
+  const handleSignOut = async () => {
+    await signOutFromSupabase();
     setCurrentUserId(null);
     setIsAuthenticated(false);
     setActivePage(Page.SignIn);
@@ -126,6 +133,17 @@ const App: React.FC = () => {
   };
 
   const renderPage = () => {
+    if (isCheckingAuth) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+            <p className="text-text-secondary">Loading...</p>
+          </div>
+        </div>
+      );
+    }
+
     if (!isAuthenticated) {
       if (activePage === Page.SignUp) {
         return (
@@ -175,7 +193,7 @@ const App: React.FC = () => {
       case Page.Learning:
         return wrapContent(<Learning />);
       case Page.Simulator:
-        return wrapContent(<Simulator profile={profile} criteria={criteria}/>);
+        return wrapContent(<Simulator profile={profile} criteria={criteria} currentSavings={totalBalance ?? 0}/>);
       case Page.Insights:
         return wrapContent(<Insights profile={profile} />);
       case Page.FinancialReport:
