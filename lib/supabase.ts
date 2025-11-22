@@ -1,10 +1,28 @@
-import { createClient } from '@supabase/supabase-js';
+// Supabase stub to keep the build working without the actual SDK.
+// In production with Supabase enabled, replace this file with a real
+// `createClient` import from '@supabase/supabase-js' and proper environment keys.
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const notAvailableError = () => new Error('Supabase is not configured in this build.');
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = {
+  auth: {
+    async signUp() {
+      return { data: null, error: notAvailableError() };
+    },
+    async signInWithPassword() {
+      return { data: null, error: notAvailableError() };
+    },
+    async signOut() {
+      return { error: notAvailableError() };
+    },
+    async getUser() {
+      return { data: { user: null }, error: notAvailableError() };
+    },
+  },
+  from() {
+    return {
+      insert: async () => ({ data: null, error: notAvailableError() }),
+      select: async () => ({ data: [], error: notAvailableError() }),
+    };
+  },
+};

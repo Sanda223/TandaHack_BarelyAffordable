@@ -23,8 +23,25 @@ const FinancialReport: React.FC<FinancialReportProps> = ({ bankAnalysis, profile
     return recurringExpenses.reduce((sum, item) => sum + recurringAmount(item), 0);
   }, [bankAnalysis, recurringExpenses]);
 
+  // Prefer grouped categories from analyzer JSON; fall back to recurring + discretionary
   const chartData = useMemo(() => {
     if (!bankAnalysis) return [];
+    const categories = (bankAnalysis.expenseByCategory ?? []).filter(
+      (cat) => cat.category !== 'Unknown' && cat.totalSpend > 0,
+    );
+    if (categories.length > 0) {
+      return categories
+        .map((cat) => ({
+          name: cat.category,
+          amount:
+            cat.averageMonthlySpend && cat.averageMonthlySpend > 0
+              ? Math.round(cat.averageMonthlySpend)
+              : Math.round(cat.totalSpend / Math.max(cat.monthCount || 1, 1)),
+        }))
+        .sort((a, b) => b.amount - a.amount);
+    }
+
+    // Fallback to recurring + discretionary
     const items = recurringExpenses.map((item) => ({
       name: item.name,
       amount: recurringAmount(item),
@@ -48,13 +65,27 @@ const FinancialReport: React.FC<FinancialReportProps> = ({ bankAnalysis, profile
   }, [bankAnalysis]);
 
   const leakageHotspots = useMemo(() => {
+    if (bankAnalysis?.leakageHotspots?.length) {
+      return bankAnalysis.leakageHotspots.map((item, index) => {
+        const amount = Math.round(
+          item.estimatedMonthlyCost ?? item.averageAmount ?? (item as any).amount ?? 0,
+        );
+        return {
+          name: item.name,
+          amount,
+          impact: index === 0 ? 'High' : index === 1 ? 'Medium' : 'Moderate',
+          suggestion: `Cut ${item.name} by 15% to free up ~$${Math.round(amount * 0.15)} each month.`,
+        };
+      });
+    }
+
     if (!chartData.length) return [];
     return chartData.slice(0, 3).map((item, index) => ({
       ...item,
       impact: index === 0 ? 'High' : index === 1 ? 'Medium' : 'Moderate',
       suggestion: `Cut ${item.name} by 15% to free up ~$${(item.amount * 0.15).toFixed(0)} each month.`,
     }));
-  }, [chartData]);
+  }, [bankAnalysis?.leakageHotspots, chartData]);
 
   if (!bankAnalysis) {
     return (

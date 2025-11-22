@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
 import { LearningItem as LearningItemType } from '../types';
 import Card from '../components/Card';
 import Icon from '../components/Icon';
@@ -121,8 +120,8 @@ const Learning: React.FC = () => {
             </button>
           </div>
           {answerPreview && (
-            <div className="text-sm text-text-primary bg-light-gray rounded-xl px-4 py-3 prose prose-sm max-w-none">
-              <ReactMarkdown>{answerPreview}</ReactMarkdown>
+            <div className="text-sm text-text-primary bg-light-gray rounded-xl px-4 py-3">
+              {answerPreview}
             </div>
           )}
           {!answerPreview && (
