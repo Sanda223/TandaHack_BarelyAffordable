@@ -130,21 +130,29 @@ const Profile: React.FC<ProfileProps> = ({ profile, setProfile, bankAnalysis, se
   const depositGoal = criteria.estimatedPrice * (criteria.isFirstHomeBuyer ? 0.05 : 0.2);
 
   const recurringExpenses = bankAnalysis?.recurringExpenses ?? [];
-  const otherAmount = bankAnalysis
-    ? Math.max(
-        bankAnalysis.monthlyAverageSpend -
-          recurringExpenses.reduce((sum, item) => sum + (item.estimatedMonthlyCost ?? item.averageAmount ?? (item as any).amount ?? 0), 0),
-        0,
-      )
-    : 0;
+
+  const categoryChartData = bankAnalysis?.expenseByCategory
+    ?.filter((cat) => cat.category !== 'Unknown')
+    .map((cat) => {
+      const monthly =
+        cat.averageMonthlySpend && cat.averageMonthlySpend > 0
+          ? cat.averageMonthlySpend
+          : cat.totalSpend / Math.max(cat.monthCount || 1, 1);
+      return {
+        name: cat.category,
+        amount: Math.max(0, Math.round(monthly)),
+      };
+    }) ?? [];
 
   const spendChartData = bankAnalysis
-    ? recurringExpenses
-        .map((expense) => ({
-          name: shortExpenseNames[expense.name] ?? expense.name,
-          amount: expense.estimatedMonthlyCost ?? expense.averageAmount ?? (expense as any).amount ?? 0,
-        }))
-        .sort((a, b) => a.amount - b.amount)
+    ? categoryChartData.length > 0
+      ? categoryChartData.sort((a, b) => a.amount - b.amount)
+      : recurringExpenses
+          .map((expense) => ({
+            name: shortExpenseNames[expense.name] ?? expense.name,
+            amount: expense.estimatedMonthlyCost ?? expense.averageAmount ?? (expense as any).amount ?? 0,
+          }))
+          .sort((a, b) => a.amount - b.amount)
     : [];
 
   useEffect(() => {
@@ -273,7 +281,7 @@ const Profile: React.FC<ProfileProps> = ({ profile, setProfile, bankAnalysis, se
               <div className="pt-4">
                 <h4 className="font-semibold text-text-primary mb-2 text-center">Spending Breakdown</h4>
                 <div className="h-64 mt-2">
-                  {bankAnalysis.recurringExpenses.length > 0 ? (
+                  {spendChartData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={spendChartData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(0,0,0,0.1)" />
@@ -293,7 +301,7 @@ const Profile: React.FC<ProfileProps> = ({ profile, setProfile, bankAnalysis, se
                     </ResponsiveContainer>
                   ) : (
                     <div className="flex items-center justify-center h-full bg-light-gray rounded-xl">
-                      <p className="text-text-secondary italic">Error: No recurring expenses found to display.</p>
+                      <p className="text-text-secondary italic">No spending categories found to display.</p>
                     </div>
                   )}
                 </div>

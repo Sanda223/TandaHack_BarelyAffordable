@@ -25,14 +25,29 @@ const FinancialReport: React.FC<FinancialReportProps> = ({ bankAnalysis, profile
 
   const chartData = useMemo(() => {
     if (!bankAnalysis) return [];
+
+    // Prefer grouped categories from analyzer JSON
+    const categories = (bankAnalysis.expenseByCategory ?? []).filter((cat) => cat.category !== 'Unknown');
+    if (categories.length > 0) {
+      const groups = categories.map((cat) => {
+        const monthly =
+          cat.averageMonthlySpend && cat.averageMonthlySpend > 0
+            ? cat.averageMonthlySpend
+            : cat.totalSpend / Math.max(cat.monthCount || 1, 1);
+        return {
+          name: cat.category,
+          amount: Math.max(0, Math.round(monthly)),
+        };
+      });
+      return groups.sort((a, b) => b.amount - a.amount);
+    }
+
+    // Fallback to recurring + discretionary
     const items = recurringExpenses.map((item) => ({
       name: item.name,
       amount: recurringAmount(item),
     }));
-    const discretionary = Math.max(bankAnalysis.monthlyAverageSpend - totalRecurring, 0);
-    if (discretionary > 0) {
-      items.push({ name: 'Discretionary', amount: discretionary });
-    }
+    // Discretionary removed as requested; show only recurring items
     return items.sort((a, b) => b.amount - a.amount);
   }, [bankAnalysis, recurringExpenses, totalRecurring]);
 
@@ -48,13 +63,27 @@ const FinancialReport: React.FC<FinancialReportProps> = ({ bankAnalysis, profile
   }, [bankAnalysis]);
 
   const leakageHotspots = useMemo(() => {
+    if (bankAnalysis?.leakageHotspots?.length) {
+      return bankAnalysis.leakageHotspots.map((item, index) => {
+        const amount = Math.round(
+          item.estimatedMonthlyCost ?? item.averageAmount ?? (item as any).amount ?? 0,
+        );
+        return {
+          name: item.name,
+          amount,
+          impact: index === 0 ? 'High' : index === 1 ? 'Medium' : 'Moderate',
+          suggestion: `Cut ${item.name} by 15% to free up ~$${Math.round(amount * 0.15)} each month.`,
+        };
+      });
+    }
+
     if (!chartData.length) return [];
     return chartData.slice(0, 3).map((item, index) => ({
       ...item,
       impact: index === 0 ? 'High' : index === 1 ? 'Medium' : 'Moderate',
       suggestion: `Cut ${item.name} by 15% to free up ~$${(item.amount * 0.15).toFixed(0)} each month.`,
     }));
-  }, [chartData]);
+  }, [bankAnalysis?.leakageHotspots, chartData]);
 
   if (!bankAnalysis) {
     return (
