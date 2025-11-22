@@ -5,6 +5,12 @@ import { generateSimulatorSummary } from '../services/geminiService';
 import Button from '../components/Button';
 import Icon from '../components/Icon';
 
+interface SimulatorProps {
+  profile: UserProfile;
+  criteria: HomeCriteria;
+  currentSavings?: number;
+}
+
 const Slider: React.FC<{ label: string; value: number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; min: number; max: number; step: number; unit?: string; }> = 
 ({ label, value, onChange, min, max, step, unit = '' }) => (
   <div>
@@ -24,7 +30,7 @@ const Slider: React.FC<{ label: string; value: number; onChange: (e: React.Chang
   </div>
 );
 
-const Simulator: React.FC<{ profile: UserProfile, criteria: HomeCriteria }> = ({ profile, criteria }) => {
+const Simulator: React.FC<SimulatorProps> = ({ profile, criteria, currentSavings = 0 }) => {
   const [diningSpendReduction, setDiningSpendReduction] = useState(0);
   const [gigIncome, setGigIncome] = useState(0);
   const [cancelSubscriptions, setCancelSubscriptions] = useState(0);
@@ -34,14 +40,57 @@ const Simulator: React.FC<{ profile: UserProfile, criteria: HomeCriteria }> = ({
   const initialMonthlySavings = useMemo(() => profile.monthlyIncome * 0.25, [profile.monthlyIncome]);
   const newMonthlySavings = useMemo(() => initialMonthlySavings + (initialMonthlySavings * (diningSpendReduction / 100)) + gigIncome + (cancelSubscriptions * 15), [initialMonthlySavings, diningSpendReduction, gigIncome, cancelSubscriptions]);
   const depositGoal = useMemo(() => criteria.estimatedPrice * (criteria.isFirstHomeBuyer ? 0.05 : 0.20), [criteria]);
-  const originalETA = useMemo(() => initialMonthlySavings > 0 ? Math.ceil(depositGoal / initialMonthlySavings) : Infinity, [depositGoal, initialMonthlySavings]);
-  const newETA = useMemo(() => newMonthlySavings > 0 ? Math.ceil(depositGoal / newMonthlySavings) : Infinity, [depositGoal, newMonthlySavings]);
+  
+  // Match Dashboard calculation: use daily savings and days, then convert to months
+  const initialDailySavings = useMemo(() => initialMonthlySavings / (365.25 / 12), [initialMonthlySavings]);
+  const newDailySavings = useMemo(() => newMonthlySavings / (365.25 / 12), [newMonthlySavings]);
+  
+  const savingsNeeded = useMemo(() => depositGoal - currentSavings, [depositGoal, currentSavings]);
+  
+  const originalDaysToGoal = useMemo(() => {
+    if (savingsNeeded <= 0) return 0;
+    if (initialDailySavings <= 0) return Infinity;
+    return Math.ceil(savingsNeeded / initialDailySavings);
+  }, [savingsNeeded, initialDailySavings]);
+  
+  const newDaysToGoal = useMemo(() => {
+    if (savingsNeeded <= 0) return 0;
+    if (newDailySavings <= 0) return Infinity;
+    return Math.ceil(savingsNeeded / newDailySavings);
+  }, [savingsNeeded, newDailySavings]);
+  
+  // Convert days to months for display
+  const originalETA = useMemo(() => isFinite(originalDaysToGoal) ? Math.ceil(originalDaysToGoal / 30) : Infinity, [originalDaysToGoal]);
+  const newETA = useMemo(() => isFinite(newDaysToGoal) ? Math.ceil(newDaysToGoal / 30) : Infinity, [newDaysToGoal]);
   const timeSaved = useMemo(() => isFinite(originalETA) && isFinite(newETA) ? originalETA - newETA : 0, [originalETA, newETA]);
+  const daysSaved = useMemo(() => isFinite(originalDaysToGoal) && isFinite(newDaysToGoal) ? originalDaysToGoal - newDaysToGoal : 0, [originalDaysToGoal, newDaysToGoal]);
   
   const handleGenerateSummary = async () => {
     setIsLoadingSummary(true);
-    const changesSummary = `Reducing dining by ${diningSpendReduction}%, adding $${gigIncome}/mo income, and canceling ${cancelSubscriptions} subscriptions.`;
-    const result = await generateSimulatorSummary(changesSummary, `${originalETA} months`, `${newETA} months`);
+    
+    // Build detailed changes summary
+    const changes: string[] = [];
+    if (diningSpendReduction > 0) {
+      changes.push(`reducing dining out spending by ${diningSpendReduction}%`);
+    }
+    if (gigIncome > 0) {
+      changes.push(`adding $${gigIncome}/month in gig income`);
+    }
+    if (cancelSubscriptions > 0) {
+      changes.push(`canceling ${cancelSubscriptions} subscription${cancelSubscriptions > 1 ? 's' : ''} (saving ~$${cancelSubscriptions * 15}/month)`);
+    }
+    
+    const changesSummary = changes.length > 0
+      ? changes.join(', ')
+      : 'no changes';
+    
+    const result = await generateSimulatorSummary(
+      changesSummary,
+      `${originalETA} months (${originalDaysToGoal.toLocaleString()} days)`,
+      `${newETA} months (${newDaysToGoal.toLocaleString()} days)`,
+      timeSaved,
+      daysSaved
+    );
     setSummary(result);
     setIsLoadingSummary(false);
   }
@@ -52,15 +101,16 @@ const Simulator: React.FC<{ profile: UserProfile, criteria: HomeCriteria }> = ({
         <h1 className="text-3xl font-bold text-text-primary">What-If Simulator</h1>
         <p className="text-text-secondary mt-1 flex items-center justify-center">
           See how small changes can fast-track your goal!
-          <Icon name="rocket" className="w-5 h-5 ml-2" />
+          {/* <Icon name="rocket" className="w-5 h-5 ml-2" /> */}
         </p>
       </header>
       
        <Card className="text-center">
         <p className="text-sm text-text-secondary">New Time to Goal</p>
         <p className="text-5xl font-bold text-accent my-1">{isFinite(newETA) ? newETA : '∞'} <span className="text-3xl">months</span></p>
-        {timeSaved > 0 && <p className="text-sm font-semibold text-green-600">🎉 You saved {timeSaved} months!</p>}
-        <p className="text-xs text-gray-400 line-through mt-1">Originally {isFinite(originalETA) ? originalETA : '∞'} months</p>
+        {isFinite(newDaysToGoal) && <p className="text-xs text-text-secondary mt-1">({newDaysToGoal.toLocaleString()} days)</p>}
+        {timeSaved > 0 && <p className="text-sm font-semibold text-green-600 mt-2">You saved {timeSaved} months!</p>}
+        <p className="text-xs text-gray-400 line-through mt-1">Originally {isFinite(originalETA) ? originalETA : '∞'} months {isFinite(originalDaysToGoal) && `(${originalDaysToGoal.toLocaleString()} days)`}</p>
       </Card>
         
       <Card>
