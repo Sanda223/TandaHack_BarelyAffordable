@@ -26,6 +26,7 @@ A prototype AI assistant that helps first-time home buyers understand their fina
 - `npm run dev` — Start Vite dev server (defaults to http://localhost:3000)
 - `npm run build` — Production build
 - `npm run preview` — Preview the production build locally
+- `npm run analyzer:server` — (Optional) Run the analyzer API locally (requires Python+pandas)
 
 ## Project Structure
 - `App.tsx` — App shell, routing via `Page` enum, shared state (auth, profile, criteria, loan settings)
@@ -36,4 +37,4 @@ A prototype AI assistant that helps first-time home buyers understand their fina
 
 ## Notes
 - The dashboard, simulator, and insights pages will use AI only when `GEMINI_API_KEY` is present; otherwise they show deterministic mock data.
-- Bank statement uploads are simulated; `Profile` seeds `BankStatementAnalysis` with sample values, which drive the `FinancialReport` visuals.
+- Bank statement uploads are simulated client-side by default. If you deploy the Python analyzer service (e.g., on Fly.io using `Dockerfile.analyzer` + `server/index.js` + `scripts/statement_analyzer.py`), set `VITE_ANALYZER_API` to its URL (e.g., `https://homepath-analyzer.fly.dev`). If unset or unreachable, the app falls back to the in-browser parser.
